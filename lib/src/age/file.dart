@@ -1,35 +1,46 @@
 import 'dart:typed_data';
 
 import 'package:age_yubikey_pgp/src/age/header.dart';
+import 'package:age_yubikey_pgp/src/age/random.dart';
 import 'package:age_yubikey_pgp/src/age/stanza.dart';
 import 'package:age_yubikey_pgp/src/util.dart';
 import 'package:collection/collection.dart';
 import 'package:cryptography/cryptography.dart';
+import 'package:meta/meta.dart';
 
 class AgeFile {
   final Uint8List _content;
 
   AgeFile(this._content);
 
-  Future<Uint8List> encrypt(List<Uint8List> recipients,
-      [Uint8List? symmetricFileKey,
+  @visibleForTesting
+  Future<Uint8List> encryptWithEphemeralKeypair(List<Uint8List> recipients,
+      {Uint8List? symmetricFileKey,
       SimpleKeyPair? keyPair,
-      Uint8List? nonce]) async {
-    symmetricFileKey ??=
-        Uint8List.fromList(SecretKeyData.random(length: 16).bytes);
+      Uint8List? payloadNonce}) async {
+    symmetricFileKey ??= AgeRandom().bytes(16);
     final stanzas =
         await Future.wait<AgeStanza>(recipients.map((recipient) async {
-      return AgeStanza.create(symmetricFileKey!, recipient, keyPair);
+      return AgeStanza.create(recipient, keyPair);
     }));
-    final header = AgeHeader(stanzas, symmetricFileKey);
-    return Uint8List.fromList((await header.serialize()) +
+    final header = AgeHeader(stanzas);
+    payloadNonce ??= AgeRandom().bytes(16);
+    return Uint8List.fromList((await header.serialize(symmetricFileKey)) +
         "\n".codeUnits +
-        await _payload(symmetricFileKey, nonce));
+        await _payload(
+            symmetricFileKey: symmetricFileKey, nonce: payloadNonce));
   }
 
-  Future<Uint8List> _payload(Uint8List symmetricFileKey,
-      [Uint8List? nonce]) async {
-    nonce ??= Uint8List.fromList(SecretKeyData.random(length: 16).bytes);
+  Future<Uint8List> encrypt(List<Uint8List> recipients) async {
+    final symmetricFileKey = AgeRandom().bytes(16);
+    return encryptWithEphemeralKeypair(
+      recipients,
+      symmetricFileKey: symmetricFileKey,
+    );
+  }
+
+  Future<Uint8List> _payload(
+      {required Uint8List symmetricFileKey, required Uint8List nonce}) async {
     final hkdfAlgorithm = Hkdf(
       hmac: Hmac(Sha256()),
       outputLength: 32,

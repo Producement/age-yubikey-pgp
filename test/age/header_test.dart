@@ -10,11 +10,11 @@ void main() {
   test('header', () async {
     final ephemeralKeyPair = await algorithm.newKeyPairFromSeed(Uint8List(32));
     final stanza = await AgeStanza.create(
-        symmetricFileKey, recipientKeyPair.publicKeyBytes, ephemeralKeyPair);
-    final header = AgeHeader([stanza], symmetricFileKey);
-    expect(String.fromCharCodes(await header.serialize()),
+        recipientKeyPair.publicKeyBytes, ephemeralKeyPair);
+    final header = AgeHeader([stanza]);
+    expect(String.fromCharCodes(await header.serialize(symmetricFileKey)),
         equals('''age-encryption.org/v1
-${await stanza.serialize()}
+${await stanza.serialize(symmetricFileKey)}
 --- hnTNhYFvWIIs53UDE1UqyW/PYyLD3zFmDJPTMS7/s8U'''));
   });
 }

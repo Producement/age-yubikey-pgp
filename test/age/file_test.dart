@@ -9,9 +9,13 @@ import '../fixture.dart';
 void main() {
   test('encrypt', () async {
     final file = AgeFile(Uint8List.fromList("sinu ema".codeUnits));
+    final nonce = Uint8List.fromList(List.generate(16, (index) => 1));
     final ephemeralKeyPair = await algorithm.newKeyPairFromSeed(Uint8List(32));
-    var encrypted = await file.encrypt([recipientKeyPair.publicKeyBytes],
-        symmetricFileKey, ephemeralKeyPair, nonce);
+    var encrypted = await file.encryptWithEphemeralKeypair(
+        [recipientKeyPair.publicKeyBytes],
+        symmetricFileKey: symmetricFileKey,
+        keyPair: ephemeralKeyPair,
+        payloadNonce: nonce);
     final dataAsEncryptedBytes =
         hex.decode("5fe918b39a0ad95a56205d9eba2a3d560118df011fd530ff");
     expect(

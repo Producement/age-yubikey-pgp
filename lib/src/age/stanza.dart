@@ -8,26 +8,23 @@ class AgeStanza {
   static const _info = "age-encryption.org/v1/X25519";
   static const _algorithmTag = "X25519";
   static final _algorithm = X25519();
-  final Uint8List _symmetricFileKey;
   final Uint8List _recipientPublicKey;
   final SimpleKeyPair _ephemeralKeyPair;
 
-  AgeStanza._(
-      this._symmetricFileKey, this._recipientPublicKey, this._ephemeralKeyPair);
+  AgeStanza._(this._recipientPublicKey, this._ephemeralKeyPair);
 
-  static Future<AgeStanza> create(
-      Uint8List symmetricFileKey, Uint8List recipientPublicKey,
+  static Future<AgeStanza> create(Uint8List recipientPublicKey,
       [SimpleKeyPair? ephemeralKeyPair]) async {
-    return AgeStanza._(symmetricFileKey, recipientPublicKey,
-        ephemeralKeyPair ?? await _algorithm.newKeyPair());
+    return AgeStanza._(
+        recipientPublicKey, ephemeralKeyPair ?? await _algorithm.newKeyPair());
   }
 
-  Future<String> serialize() async {
+  Future<String> serialize(Uint8List symmetricFileKey) async {
     final publicKey = await _ephemeralKeyPair.extractPublicKey();
     final derivedKey = await _deriveKey(_recipientPublicKey, _ephemeralKeyPair);
 
     final header = "-> $_algorithmTag ${base64Raw(publicKey.bytes)}";
-    final body = base64Raw(await _wrap(_symmetricFileKey, derivedKey));
+    final body = base64Raw(await _wrap(symmetricFileKey, derivedKey));
     return "${wrapAtPosition(header)}\n${wrapAtPosition(body)}";
   }
 

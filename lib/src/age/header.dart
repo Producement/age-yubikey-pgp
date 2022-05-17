@@ -6,18 +6,17 @@ import 'package:cryptography/cryptography.dart';
 
 class AgeHeader {
   final List<AgeStanza> _stanzas;
-  final Uint8List _symmetricFileKey;
 
-  AgeHeader(this._stanzas, this._symmetricFileKey);
+  AgeHeader(this._stanzas);
 
-  Future<Uint8List> serialize() async {
+  Future<Uint8List> serialize(Uint8List symmetricFileKey) async {
     final header = StringBuffer();
     header.writeln("age-encryption.org/v1");
     for (var stanza in _stanzas) {
-      header.writeln(await stanza.serialize());
+      header.writeln(await stanza.serialize(symmetricFileKey));
     }
     header.write("---");
-    header.write(" ${await _mac(header.toString(), _symmetricFileKey)}");
+    header.write(" ${await _mac(header.toString(), symmetricFileKey)}");
     return Uint8List.fromList(header.toString().codeUnits);
   }
 
