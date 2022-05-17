@@ -1,34 +1,38 @@
 import 'dart:typed_data';
 
+import 'package:age_yubikey_pgp/src/age/keypair.dart';
 import 'package:cryptography/cryptography.dart';
 
 import '../util.dart';
 
-class AgeStanza {
+class X25519AgeStanza extends AgeStanza {
   static const _info = "age-encryption.org/v1/X25519";
   static const _algorithmTag = "X25519";
   static final _algorithm = X25519();
-  final Uint8List _recipientPublicKey;
-  final SimpleKeyPair _ephemeralKeyPair;
+  final Uint8List _ephemeralPublicKey;
+  final Uint8List _wrappedKey;
 
-  AgeStanza._(this._recipientPublicKey, this._ephemeralKeyPair);
+  X25519AgeStanza._(this._ephemeralPublicKey, this._wrappedKey) : super._();
 
-  static Future<AgeStanza> create(Uint8List recipientPublicKey,
+  static Future<X25519AgeStanza> create(
+      Uint8List recipientPublicKey, Uint8List symmetricFileKey,
       [SimpleKeyPair? ephemeralKeyPair]) async {
-    return AgeStanza._(
-        recipientPublicKey, ephemeralKeyPair ?? await _algorithm.newKeyPair());
+    ephemeralKeyPair ??= await _algorithm.newKeyPair();
+    final ephemeralPublicKey = await ephemeralKeyPair.extractPublicKey();
+    final derivedKey = await _deriveKey(recipientPublicKey, ephemeralKeyPair);
+    final wrappedKey = await _wrap(symmetricFileKey, derivedKey);
+    return X25519AgeStanza._(
+        Uint8List.fromList(ephemeralPublicKey.bytes), wrappedKey);
   }
 
-  Future<String> serialize(Uint8List symmetricFileKey) async {
-    final publicKey = await _ephemeralKeyPair.extractPublicKey();
-    final derivedKey = await _deriveKey(_recipientPublicKey, _ephemeralKeyPair);
-
-    final header = "-> $_algorithmTag ${base64Raw(publicKey.bytes)}";
-    final body = base64Raw(await _wrap(symmetricFileKey, derivedKey));
+  @override
+  Future<String> serialize() async {
+    final header = "-> $_algorithmTag ${base64RawEncode(_ephemeralPublicKey)}";
+    final body = base64RawEncode(_wrappedKey);
     return "${wrapAtPosition(header)}\n${wrapAtPosition(body)}";
   }
 
-  Future<List<int>> _wrap(
+  static Future<Uint8List> _wrap(
       Uint8List symmetricFileKey, SecretKey derivedKey) async {
     final wrappingAlgorithm = Chacha20.poly1305Aead();
     final body = await wrappingAlgorithm.encrypt(symmetricFileKey,
@@ -36,7 +40,7 @@ class AgeStanza {
     return body.concatenation(nonce: false);
   }
 
-  Future<SecretKey> _deriveKey(
+  static Future<SecretKey> _deriveKey(
       Uint8List recipientPublicKey, SimpleKeyPair keyPair) async {
     final sharedSecret = await _sharedSecret(recipientPublicKey, keyPair);
     final hkdfAlgorithm = Hkdf(
@@ -49,7 +53,7 @@ class AgeStanza {
     return derivedKey;
   }
 
-  Future<SecretKey> _sharedSecret(
+  static Future<SecretKey> _sharedSecret(
       Uint8List recipientPublicKey, SimpleKeyPair ephemeralKeypair) async {
     final remotePublicKey =
         SimplePublicKey(recipientPublicKey, type: KeyPairType.x25519);
@@ -57,4 +61,51 @@ class AgeStanza {
         keyPair: ephemeralKeypair, remotePublicKey: remotePublicKey);
     return sharedSecret;
   }
+
+  @override
+  Future<Uint8List> decryptedFileKey(AgeKeypair recipient) async {
+    final keyPair = SimpleKeyPairData(recipient.privateKeyBytes!,
+        publicKey:
+            SimplePublicKey(recipient.publicKeyBytes, type: KeyPairType.x25519),
+        type: KeyPairType.x25519);
+    final ephemeralPublicKey =
+        SimplePublicKey(_ephemeralPublicKey, type: KeyPairType.x25519);
+    final sharedSecret = await _algorithm.sharedSecretKey(
+        keyPair: keyPair, remotePublicKey: ephemeralPublicKey);
+
+    final hkdfAlgorithm = Hkdf(
+      hmac: Hmac(Sha256()),
+      outputLength: 32,
+    );
+    final salt = ephemeralPublicKey.bytes + recipient.publicKeyBytes;
+    final derivedKey = await hkdfAlgorithm.deriveKey(
+        secretKey: sharedSecret, info: _info.codeUnits, nonce: salt);
+    final wrappingAlgorithm = Chacha20.poly1305Aead();
+    final secretBox = SecretBox.fromConcatenation(
+        List.generate(12, (index) => 0x00) + _wrappedKey,
+        macLength: 16,
+        nonceLength: 12);
+    return Uint8List.fromList(
+        await wrappingAlgorithm.decrypt(secretBox, secretKey: derivedKey));
+  }
+}
+
+abstract class AgeStanza {
+  AgeStanza._();
+
+  factory AgeStanza(String content) {
+    final lines = content.split('\n');
+    final arguments = lines[0].replaceFirst('-> ', '').split(' ');
+    final body = lines.sublist(1).join('').replaceAll('\n', '');
+    if (arguments[0] == "X25519") {
+      return X25519AgeStanza._(
+          base64RawDecode(arguments[1]), base64RawDecode(body));
+    } else {
+      throw Exception("Recipient not supported: ${arguments[0]}");
+    }
+  }
+
+  Future<String> serialize();
+
+  Future<Uint8List> decryptedFileKey(AgeKeypair recipient);
 }
