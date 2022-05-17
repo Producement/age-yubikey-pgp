@@ -12,6 +12,7 @@ void registerPlugins() {
   AgePlugin.registerPlugin(x25519Plugin);
   final smartCardInterface = YubikeySmartCardInterface(
       SmartCardInterface(), YubikeySmartCardCommand());
-  final yubikeyPlugin = YubikeyPgpAgePlugin(smartCardInterface);
+  final pinProvider = PromptYubikeyPinProvider();
+  final yubikeyPlugin = YubikeyPgpAgePlugin(smartCardInterface, pinProvider);
   AgePlugin.registerPlugin(yubikeyPlugin);
 }

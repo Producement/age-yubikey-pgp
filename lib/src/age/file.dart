@@ -26,7 +26,8 @@ class AgeFile {
       for (var stanza in header.stanzas) {
         try {
           symmetricFileKey = await stanza.decryptedFileKey(identity);
-        } catch (e) {
+        } catch (e, stacktrace) {
+          print(stacktrace);
           //Ignore
         }
       }

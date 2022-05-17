@@ -61,7 +61,7 @@ class YubikeySmartCardCommand {
   Uint8List getSharedSecret(Uint8List publicKey) {
     final externalPublicKey = [0x86, publicKey.length] + publicKey;
     final publicKeyDataObject =
-        [0x7F49, externalPublicKey.length] + externalPublicKey;
+        [0x7F, 0x49, externalPublicKey.length] + externalPublicKey;
     final cipherDataObject =
         [0xA6, publicKeyDataObject.length] + publicKeyDataObject;
     return _createCommand(0x00, Instruction.performSecurityOperation, 0x80,

@@ -81,7 +81,9 @@ void main() {
     final recipientPublicKey = Uint8List.fromList([6, 7, 8]);
     final sharedSecretCommand =
         yubikeyCommand.getSharedSecret(recipientPublicKey);
-    expect(sharedSecretCommand,
-        orderedEquals([0, 42, 128, 134, 9, 166, 7, 73, 5, 134, 3, 6, 7, 8]));
+    expect(
+        sharedSecretCommand,
+        orderedEquals(
+            [0, 42, 128, 134, 10, 166, 8, 127, 73, 5, 134, 3, 6, 7, 8]));
   });
 }
