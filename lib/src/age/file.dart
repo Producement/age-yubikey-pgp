@@ -2,6 +2,7 @@ import 'dart:typed_data';
 
 import 'package:age_yubikey_pgp/src/age/header.dart';
 import 'package:age_yubikey_pgp/src/age/keypair.dart';
+import 'package:age_yubikey_pgp/src/age/plugin.dart';
 import 'package:age_yubikey_pgp/src/age/random.dart';
 import 'package:age_yubikey_pgp/src/age/stanza.dart';
 import 'package:age_yubikey_pgp/src/util.dart';
@@ -17,7 +18,7 @@ class AgeFile {
   Future<Uint8List> decrypt(List<AgeKeypair> identities) async {
     final headerAndPayload = String.fromCharCodes(_content)
         .split('\n')
-        .splitAfter((element) => element.startsWith("---"))
+        .splitAfter((element) => element.startsWith('---'))
         .toList();
     final header = AgeHeader.parse(headerAndPayload[0].join('\n'));
     Uint8List? symmetricFileKey;
@@ -31,7 +32,7 @@ class AgeFile {
       }
     }
     if (symmetricFileKey == null) {
-      throw Exception("Recipient not found");
+      throw Exception('Recipient not found');
     }
     await header.checkMac(symmetricFileKey);
     final payload = headerAndPayload[1].join('\n');
@@ -40,24 +41,24 @@ class AgeFile {
   }
 
   @visibleForTesting
-  Future<Uint8List> encryptWithEphemeralKeypair(List<Uint8List> recipients,
+  Future<Uint8List> encryptWithEphemeralKeypair(List<AgeKeypair> recipients,
       {Uint8List? symmetricFileKey,
       SimpleKeyPair? keyPair,
       Uint8List? payloadNonce}) async {
     symmetricFileKey ??= AgeRandom().bytes(16);
     final stanzas =
         await Future.wait<AgeStanza>(recipients.map((recipient) async {
-      return X25519AgeStanza.create(recipient, symmetricFileKey!, keyPair);
+      return AgePlugin.stanzaCreate(recipient, symmetricFileKey!, keyPair);
     }));
     final header = await AgeHeader.create(stanzas, symmetricFileKey);
     payloadNonce ??= AgeRandom().bytes(16);
     return Uint8List.fromList((await header.serialize()).codeUnits +
-        "\n".codeUnits +
+        '\n'.codeUnits +
         await _encryptPayload(
             symmetricFileKey: symmetricFileKey, nonce: payloadNonce));
   }
 
-  Future<Uint8List> encrypt(List<Uint8List> recipients) async {
+  Future<Uint8List> encrypt(List<AgeKeypair> recipients) async {
     final symmetricFileKey = AgeRandom().bytes(16);
     return encryptWithEphemeralKeypair(
       recipients,
@@ -76,7 +77,7 @@ class AgeFile {
     final payloadKey = await hkdfAlgorithm.deriveKey(
         secretKey: SecretKeyData(symmetricFileKey),
         nonce: nonce,
-        info: "payload".codeUnits);
+        info: 'payload'.codeUnits);
     final encryptionAlgorithm = Chacha20.poly1305Aead();
     final chunkedContent = chunk(payload, 64 * 1024);
     final decrypted =
@@ -103,7 +104,7 @@ class AgeFile {
     final payloadKey = await hkdfAlgorithm.deriveKey(
         secretKey: SecretKeyData(symmetricFileKey),
         nonce: nonce,
-        info: "payload".codeUnits);
+        info: 'payload'.codeUnits);
     final encryptionAlgorithm = Chacha20.poly1305Aead();
     final chunkedContent = chunk(_content, 64 * 1024);
     final encrypted =

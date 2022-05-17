@@ -24,11 +24,12 @@ List<Uint8List> chunk(Uint8List s, int chunkSize) {
   return chunked;
 }
 
-String base64RawEncode(List<int> bytes) => base64Encode(bytes).replaceAll("=", "");
+String base64RawEncode(List<int> bytes) =>
+    base64Encode(bytes).replaceAll('=', '');
 
 Uint8List base64RawDecode(String base64Raw) {
   if (base64Raw.length % 4 != 0) {
-    return base64RawDecode("$base64Raw=");
+    return base64RawDecode('$base64Raw=');
   }
   return base64Decode(base64Raw);
 }

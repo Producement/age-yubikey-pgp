@@ -3,35 +3,46 @@ import 'dart:typed_data';
 import 'package:bech32/bech32.dart';
 
 class AgeKeypair {
-  static const _pkPrefix = "age";
-  static const _identityPrefix = "AGE-SECRET-KEY-";
-
   final Uint8List? _privateKey;
+  final String? _privateKeyPrefix;
   final Uint8List _publicKey;
+  final String _publicKeyPrefix;
 
-  AgeKeypair._(this._privateKey, this._publicKey);
+  AgeKeypair(this._privateKey, this._privateKeyPrefix, this._publicKey,
+      this._publicKeyPrefix);
 
-  factory AgeKeypair(String bechIdentity, bechPublicKey) {
-    return AgeKeypair._(
-        Uint8List.fromList(_convertBits(
-            Bech32Decoder().convert(bechIdentity).data, 5, 8, false)),
-        Uint8List.fromList(_convertBits(
-            Bech32Decoder().convert(bechPublicKey).data, 5, 8, false)));
+  factory AgeKeypair.fromBech(String bechIdentity, bechPublicKey) {
+    final privateKey = Bech32Decoder().convert(bechIdentity);
+    final publicKey = Bech32Decoder().convert(bechPublicKey);
+    return AgeKeypair(
+        Uint8List.fromList(_convertBits(privateKey.data, 5, 8, false)),
+        privateKey.hrp,
+        Uint8List.fromList(_convertBits(publicKey.data, 5, 8, false)),
+        publicKey.hrp);
   }
 
-  static AgeKeypair fromPublic(String bechPublicKey) {
-    return AgeKeypair._(
+  factory AgeKeypair.fromPublic(String bechPublicKey) {
+    final publicKey = Bech32Decoder().convert(bechPublicKey);
+    return AgeKeypair(
         null,
-        Uint8List.fromList(_convertBits(
-            Bech32Decoder().convert(bechPublicKey).data, 5, 8, false)));
+        null,
+        Uint8List.fromList(_convertBits(publicKey.data, 5, 8, false)),
+        publicKey.hrp);
   }
 
-  String get publicKey => _convertToBech32(_pkPrefix, _publicKey)!;
+  String get publicKey => _convertToBech32(_publicKeyPrefix, _publicKey)!;
+
+  String get publicKeyPrefix => _publicKeyPrefix;
 
   Uint8List get publicKeyBytes => _publicKey;
 
-  String? get privateKey =>
-      _convertToBech32(_identityPrefix, _privateKey)?.toUpperCase();
+  String? get privateKey {
+    if (_privateKey == null) {
+      return null;
+    } else {
+      return _convertToBech32(_privateKeyPrefix!, _privateKey)?.toUpperCase();
+    }
+  }
 
   Uint8List? get privateKeyBytes => _privateKey;
 

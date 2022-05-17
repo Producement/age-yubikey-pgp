@@ -6,7 +6,7 @@ import 'package:collection/collection.dart';
 import 'package:cryptography/cryptography.dart';
 
 class AgeHeader {
-  static const _version = "age-encryption.org/v1";
+  static const _version = 'age-encryption.org/v1';
   final List<AgeStanza> _stanzas;
   final String _mac;
 
@@ -24,32 +24,32 @@ class AgeHeader {
   static AgeHeader parse(String content) {
     final headerAndPayload = content
         .split('\n')
-        .splitAfter((element) => element.startsWith("---"))
+        .splitAfter((element) => element.startsWith('---'))
         .toList();
     final headerLines = headerAndPayload[0];
     final versionLine = headerLines[0];
     if (versionLine != _version) {
-      throw Exception("Unsupported version: $versionLine");
+      throw Exception('Unsupported version: $versionLine');
     }
     final stanzaContent = headerLines.sublist(1, headerLines.length - 1);
     final stanzaLines =
         stanzaContent.splitBefore((line) => line.startsWith('->'));
-    final stanzas = stanzaLines.map((e) => AgeStanza(e.join('\n')));
+    final stanzas = stanzaLines.map((e) => AgeStanza.parse(e.join('\n')));
     final mac = headerLines.last.replaceFirst('--- ', '');
     return AgeHeader._(stanzas.toList(), mac);
   }
 
   Future<String> serialize() async {
-    return "${await headerWithoutMac(_stanzas)} $_mac";
+    return '${await headerWithoutMac(_stanzas)} $_mac';
   }
 
   static Future<String> headerWithoutMac(List<AgeStanza> stanzas) async {
     final header = StringBuffer();
-    header.writeln("age-encryption.org/v1");
+    header.writeln('age-encryption.org/v1');
     for (var stanza in stanzas) {
       header.writeln(await stanza.serialize());
     }
-    header.write("---");
+    header.write('---');
     return header.toString();
   }
 
@@ -69,7 +69,7 @@ class AgeHeader {
     final macKey = await hkdfAlgorithm.deriveKey(
         secretKey: secretKeyData,
         nonce: Uint8List(1),
-        info: "header".codeUnits);
+        info: 'header'.codeUnits);
     final mac = await hkdfAlgorithm.hmac
         .calculateMac(header.codeUnits, secretKey: macKey);
     return base64RawEncode(mac.bytes);

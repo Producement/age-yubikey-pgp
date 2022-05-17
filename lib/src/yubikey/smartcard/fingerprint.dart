@@ -25,11 +25,9 @@ class FingerprintCalculator {
 
   static ByteData bigIntToByteData(BigInt bigInt) {
     final data = ByteData((bigInt.bitLength / 8).ceil());
-    var _bigInt = bigInt;
-
     for (var i = 1; i <= data.lengthInBytes; i++) {
-      data.setUint8(data.lengthInBytes - i, _bigInt.toUnsigned(8).toInt());
-      _bigInt = _bigInt >> 8;
+      data.setUint8(data.lengthInBytes - i, bigInt.toUnsigned(8).toInt());
+      bigInt = bigInt >> 8;
     }
 
     return data;

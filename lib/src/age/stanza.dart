@@ -1,108 +1,22 @@
 import 'dart:typed_data';
 
 import 'package:age_yubikey_pgp/src/age/keypair.dart';
-import 'package:cryptography/cryptography.dart';
+import 'package:age_yubikey_pgp/src/age/plugin.dart';
 
 import '../util.dart';
 
-class X25519AgeStanza extends AgeStanza {
-  static const _info = "age-encryption.org/v1/X25519";
-  static const _algorithmTag = "X25519";
-  static final _algorithm = X25519();
-  final Uint8List _ephemeralPublicKey;
-  final Uint8List _wrappedKey;
-
-  X25519AgeStanza._(this._ephemeralPublicKey, this._wrappedKey) : super._();
-
-  static Future<X25519AgeStanza> create(
-      Uint8List recipientPublicKey, Uint8List symmetricFileKey,
-      [SimpleKeyPair? ephemeralKeyPair]) async {
-    ephemeralKeyPair ??= await _algorithm.newKeyPair();
-    final ephemeralPublicKey = await ephemeralKeyPair.extractPublicKey();
-    final derivedKey = await _deriveKey(recipientPublicKey, ephemeralKeyPair);
-    final wrappedKey = await _wrap(symmetricFileKey, derivedKey);
-    return X25519AgeStanza._(
-        Uint8List.fromList(ephemeralPublicKey.bytes), wrappedKey);
-  }
-
-  @override
-  Future<String> serialize() async {
-    final header = "-> $_algorithmTag ${base64RawEncode(_ephemeralPublicKey)}";
-    final body = base64RawEncode(_wrappedKey);
-    return "${wrapAtPosition(header)}\n${wrapAtPosition(body)}";
-  }
-
-  static Future<Uint8List> _wrap(
-      Uint8List symmetricFileKey, SecretKey derivedKey) async {
-    final wrappingAlgorithm = Chacha20.poly1305Aead();
-    final body = await wrappingAlgorithm.encrypt(symmetricFileKey,
-        secretKey: derivedKey, nonce: List.generate(12, (index) => 0x00));
-    return body.concatenation(nonce: false);
-  }
-
-  static Future<SecretKey> _deriveKey(
-      Uint8List recipientPublicKey, SimpleKeyPair keyPair) async {
-    final sharedSecret = await _sharedSecret(recipientPublicKey, keyPair);
-    final hkdfAlgorithm = Hkdf(
-      hmac: Hmac(Sha256()),
-      outputLength: 32,
-    );
-    final salt = (await keyPair.extractPublicKey()).bytes + recipientPublicKey;
-    final derivedKey = await hkdfAlgorithm.deriveKey(
-        secretKey: sharedSecret, info: _info.codeUnits, nonce: salt);
-    return derivedKey;
-  }
-
-  static Future<SecretKey> _sharedSecret(
-      Uint8List recipientPublicKey, SimpleKeyPair ephemeralKeypair) async {
-    final remotePublicKey =
-        SimplePublicKey(recipientPublicKey, type: KeyPairType.x25519);
-    var sharedSecret = await _algorithm.sharedSecretKey(
-        keyPair: ephemeralKeypair, remotePublicKey: remotePublicKey);
-    return sharedSecret;
-  }
-
-  @override
-  Future<Uint8List> decryptedFileKey(AgeKeypair recipient) async {
-    final keyPair = SimpleKeyPairData(recipient.privateKeyBytes!,
-        publicKey:
-            SimplePublicKey(recipient.publicKeyBytes, type: KeyPairType.x25519),
-        type: KeyPairType.x25519);
-    final ephemeralPublicKey =
-        SimplePublicKey(_ephemeralPublicKey, type: KeyPairType.x25519);
-    final sharedSecret = await _algorithm.sharedSecretKey(
-        keyPair: keyPair, remotePublicKey: ephemeralPublicKey);
-
-    final hkdfAlgorithm = Hkdf(
-      hmac: Hmac(Sha256()),
-      outputLength: 32,
-    );
-    final salt = ephemeralPublicKey.bytes + recipient.publicKeyBytes;
-    final derivedKey = await hkdfAlgorithm.deriveKey(
-        secretKey: sharedSecret, info: _info.codeUnits, nonce: salt);
-    final wrappingAlgorithm = Chacha20.poly1305Aead();
-    final secretBox = SecretBox.fromConcatenation(
-        List.generate(12, (index) => 0x00) + _wrappedKey,
-        macLength: 16,
-        nonceLength: 12);
-    return Uint8List.fromList(
-        await wrappingAlgorithm.decrypt(secretBox, secretKey: derivedKey));
-  }
-}
-
 abstract class AgeStanza {
-  AgeStanza._();
+  AgeStanza();
 
-  factory AgeStanza(String content) {
+  factory AgeStanza.parse(String content) {
     final lines = content.split('\n');
     final arguments = lines[0].replaceFirst('-> ', '').split(' ');
     final body = lines.sublist(1).join('').replaceAll('\n', '');
-    if (arguments[0] == "X25519") {
-      return X25519AgeStanza._(
-          base64RawDecode(arguments[1]), base64RawDecode(body));
-    } else {
-      throw Exception("Recipient not supported: ${arguments[0]}");
+    final stanza = AgePlugin.stanzaParse(arguments, base64RawDecode(body));
+    if (stanza != null) {
+      return stanza;
     }
+    throw Exception('Recipient not supported: ${arguments[0]}');
   }
 
   Future<String> serialize();
