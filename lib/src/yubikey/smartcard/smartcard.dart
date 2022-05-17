@@ -3,6 +3,7 @@ import 'dart:typed_data';
 
 import 'package:collection/collection.dart';
 import 'package:convert/convert.dart';
+import 'package:logging/logging.dart';
 
 abstract class SmartCardInterface {
   Future<Uint8List> sendCommand(String command);
@@ -40,6 +41,8 @@ abstract class SmartCardInterface {
 }
 
 class GPGConnectAgentSmartCardInterface extends SmartCardInterface {
+  static final logger = Logger('GPGConnectAgentSmartCardInterface');
+
   GPGConnectAgentSmartCardInterface._() : super._();
 
   @override
@@ -53,7 +56,7 @@ class GPGConnectAgentSmartCardInterface extends SmartCardInterface {
   @override
   Future<Uint8List> sendApduToCard(List<int> input) async {
     String command = 'scd apdu ${_hexWithSpaces(input)}';
-    print('Sending command: $command}');
+    logger.fine('Sending command: $command}');
     var processResult =
         await Process.run('gpg-connect-agent', [command], stdoutEncoding: null);
     List<int> result = processResult.stdout;
@@ -65,7 +68,7 @@ class GPGConnectAgentSmartCardInterface extends SmartCardInterface {
       throw Exception('Error from smartcard ${_hexWithSpaces(errorCode)}');
     }
     final processedResult = result.skip(2).take(result.length - 8).toList();
-    print('Command result: ${_hexWithSpaces(processedResult)}');
+    logger.fine('Command result: ${_hexWithSpaces(processedResult)}');
     return Uint8List.fromList(processedResult);
   }
 }

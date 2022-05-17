@@ -1,6 +1,5 @@
 import 'dart:typed_data';
 
-import 'package:age_yubikey_pgp/age_yubikey_pgp.dart';
 import 'package:age_yubikey_pgp/src/age/stanza.dart';
 import 'package:age_yubikey_pgp/src/age/x25519.dart';
 import 'package:test/test.dart';
@@ -8,7 +7,7 @@ import 'package:test/test.dart';
 import '../fixture.dart';
 
 void main() {
-  setUpAll(() => registerPlugins());
+  setUpAll(() => registerPluginsMock());
 
   final serializedStanza =
       '-> X25519 L+V9o0fNYkMVKNqsX7spBzD/9oSvxM/C7ZCZX1jLO3Q\n'

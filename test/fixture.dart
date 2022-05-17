@@ -1,6 +1,11 @@
 import 'dart:typed_data';
 
+import 'package:age_yubikey_pgp/age_yubikey_pgp.dart';
 import 'package:age_yubikey_pgp/src/age/keypair.dart';
+import 'package:age_yubikey_pgp/src/yubikey/age/plugin.dart';
+import 'package:age_yubikey_pgp/src/yubikey/smartcard/smartcard.dart';
+import 'package:age_yubikey_pgp/src/yubikey/yubikey_smartcard_command.dart';
+import 'package:age_yubikey_pgp/src/yubikey/yubikey_smartcard_interface.dart';
 import 'package:convert/convert.dart';
 import 'package:cryptography/cryptography.dart';
 
@@ -12,3 +17,21 @@ final algorithm = X25519();
 
 final symmetricFileKey =
     Uint8List.fromList(hex.decode('3055884752f3bb977b673798c6521579'));
+
+final smartCardInterface =
+    YubikeySmartCardInterface(SmartCardInterface(), YubikeySmartCardCommand());
+
+class MockPinProvider extends YubikeyPinProvider {
+  @override
+  String provideAdminPin() {
+    throw UnimplementedError();
+  }
+
+  @override
+  String providePin() {
+    throw UnimplementedError();
+  }
+}
+
+void registerPluginsMock() =>
+    registerPlugins(smartCardInterface, MockPinProvider());

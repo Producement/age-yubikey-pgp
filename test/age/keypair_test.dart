@@ -1,10 +1,9 @@
-import 'package:age_yubikey_pgp/age_yubikey_pgp.dart';
 import 'package:test/test.dart';
 
 import '../fixture.dart';
 
 void main() {
-  setUpAll(() => registerPlugins());
+  setUpAll(() => registerPluginsMock());
 
   test('keypair', () async {
     expect(

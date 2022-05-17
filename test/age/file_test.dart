@@ -1,6 +1,5 @@
 import 'dart:typed_data';
 
-import 'package:age_yubikey_pgp/age_yubikey_pgp.dart';
 import 'package:age_yubikey_pgp/src/age/file.dart';
 import 'package:convert/convert.dart';
 import 'package:test/test.dart';
@@ -8,7 +7,7 @@ import 'package:test/test.dart';
 import '../fixture.dart';
 
 void main() {
-  setUpAll(() => registerPlugins());
+  setUpAll(() => registerPluginsMock());
 
   final dataAsEncryptedBytes =
       hex.decode('5fe918b39a0ad95a56205d9eba2a3d560118df011fd530ff');

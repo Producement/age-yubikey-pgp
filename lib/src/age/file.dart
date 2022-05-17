@@ -8,9 +8,11 @@ import 'package:age_yubikey_pgp/src/age/stanza.dart';
 import 'package:age_yubikey_pgp/src/util.dart';
 import 'package:collection/collection.dart';
 import 'package:cryptography/cryptography.dart';
+import 'package:logging/logging.dart';
 import 'package:meta/meta.dart';
 
 class AgeFile {
+  final Logger logger = Logger('AgeFile');
   final Uint8List _content;
 
   AgeFile(this._content);
@@ -27,7 +29,7 @@ class AgeFile {
         try {
           symmetricFileKey = await stanza.decryptedFileKey(identity);
         } catch (e, stacktrace) {
-          print(stacktrace);
+          logger.warning(stacktrace);
           //Ignore
         }
       }
@@ -60,11 +62,7 @@ class AgeFile {
   }
 
   Future<Uint8List> encrypt(List<AgeKeypair> recipients) async {
-    final symmetricFileKey = AgeRandom().bytes(16);
-    return encryptWithEphemeralKeypair(
-      recipients,
-      symmetricFileKey: symmetricFileKey,
-    );
+    return encryptWithEphemeralKeypair(recipients);
   }
 
   Future<Uint8List> _decryptPayload(Uint8List payload,

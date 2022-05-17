@@ -7,6 +7,7 @@ import 'package:cryptography/cryptography.dart';
 
 class AgeHeader {
   static const _version = 'age-encryption.org/v1';
+  static final _macSeparator = '---';
   final List<AgeStanza> _stanzas;
   final String _mac;
 
@@ -24,7 +25,7 @@ class AgeHeader {
   static AgeHeader parse(String content) {
     final headerAndPayload = content
         .split('\n')
-        .splitAfter((element) => element.startsWith('---'))
+        .splitAfter((element) => element.startsWith(_macSeparator))
         .toList();
     final headerLines = headerAndPayload[0];
     final versionLine = headerLines[0];
@@ -35,7 +36,7 @@ class AgeHeader {
     final stanzaLines =
         stanzaContent.splitBefore((line) => line.startsWith('->'));
     final stanzas = stanzaLines.map((e) => AgeStanza.parse(e.join('\n')));
-    final mac = headerLines.last.replaceFirst('--- ', '');
+    final mac = headerLines.last.replaceFirst('$_macSeparator ', '');
     return AgeHeader._(stanzas.toList(), mac);
   }
 
@@ -45,11 +46,11 @@ class AgeHeader {
 
   static Future<String> headerWithoutMac(List<AgeStanza> stanzas) async {
     final header = StringBuffer();
-    header.writeln('age-encryption.org/v1');
+    header.writeln(_version);
     for (var stanza in stanzas) {
       header.writeln(await stanza.serialize());
     }
-    header.write('---');
+    header.write(_macSeparator);
     return header.toString();
   }
 
