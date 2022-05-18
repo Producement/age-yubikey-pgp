@@ -2,6 +2,7 @@ import 'dart:typed_data';
 
 import 'package:age_yubikey_pgp/age_yubikey_pgp.dart';
 import 'package:age_yubikey_pgp/src/age/keypair.dart';
+import 'package:age_yubikey_pgp/src/age/random.dart';
 import 'package:age_yubikey_pgp/src/yubikey/yubikey_smartcard_interface.dart';
 import 'package:convert/convert.dart';
 import 'package:cryptography/cryptography.dart';
@@ -21,3 +22,10 @@ final smartCardInterface = YubikeySmartCardInterface(
     MockSmartCardInterface(), MockYubikeySmartCardCommand(), MockPinProvider());
 
 void registerPluginsMock() => registerPlugins(smartCardInterface);
+
+class ConstAgeRandom implements AgeRandom {
+  @override
+  Uint8List bytes(int length) {
+    return Uint8List.fromList(List.generate(length, (index) => 0x01));
+  }
+}

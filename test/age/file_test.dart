@@ -10,26 +10,23 @@ void main() {
   setUpAll(() => registerPluginsMock());
 
   final dataAsEncryptedBytes =
-      hex.decode('5fe918b39a0ad95a56205d9eba2a3d560118df011fd530ff');
+      hex.decode('831464304e4ea2bb7c19518b745fb3232d2cdec054052c2b');
   final nonce = Uint8List.fromList(List.generate(16, (index) => 1));
   final encryptedFile = '''age-encryption.org/v1
 -> X25519 L+V9o0fNYkMVKNqsX7spBzD/9oSvxM/C7ZCZX1jLO3Q
-1cT9u0o55LQ9SVnYROZh6SqATr3CGseHSlgf4YMD4LE
---- hnTNhYFvWIIs53UDE1UqyW/PYyLD3zFmDJPTMS7/s8U
+5JB0/RnLXiJHL29Bg7V1kWZX5+WaM8KjNryAX74lJQg
+--- B8KHU7wT6kOr8cgWResfbN3irfAO3yZpt0aoR026YHs
 '''
           .codeUnits +
       nonce +
       dataAsEncryptedBytes;
 
   test('encrypt', () async {
-    final file = AgeFile(Uint8List.fromList('sinu ema'.codeUnits));
-    final nonce = Uint8List.fromList(List.generate(16, (index) => 1));
     final ephemeralKeyPair = await algorithm.newKeyPairFromSeed(Uint8List(32));
-    var encrypted = await file.encryptWithEphemeralKeypair([recipientKeyPair],
-        symmetricFileKey: symmetricFileKey,
-        keyPair: ephemeralKeyPair,
-        payloadNonce: nonce);
-    expect(encrypted, orderedEquals(encryptedFile));
+    var encrypted = await AgeFile.encrypt(
+        Uint8List.fromList('sinu ema'.codeUnits), [recipientKeyPair],
+        random: ConstAgeRandom(), keyPair: ephemeralKeyPair);
+    expect(encrypted.content, orderedEquals(encryptedFile));
   });
 
   test('decrypt', () async {

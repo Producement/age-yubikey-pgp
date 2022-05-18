@@ -32,32 +32,29 @@ void main(List<String> arguments) async {
     stdout.writeln(keyPair.publicKey);
   } else if (results['encrypt']) {
     final input = File(results.rest.last).readAsBytesSync();
-    final data = AgeFile(input);
     final recipients = results['recipient'] as List<String>;
     final keyPairs =
         recipients.map((recipient) => AgeKeypair.fromPublic(recipient));
-    final encrypted = await data.encrypt(keyPairs.toList());
-    final output = results['output'];
-    if (output != null) {
-      File(output).writeAsBytesSync(encrypted);
-    } else {
-      stdout.add(encrypted);
-    }
-    File('${results.rest.last}.age').writeAsBytesSync(encrypted);
+    final encrypted = await AgeFile.encrypt(input, keyPairs.toList());
+    writeToOut(results, encrypted.content);
   } else if (results['decrypt']) {
     final input = File(results.rest.last).readAsBytesSync();
     final newFile = AgeFile(input);
     final keyPair = await YubikeyX25519Keypair.fromCard(smartCardInterface);
     final decrypted = await newFile.decrypt([keyPair]);
-    final output = results['output'];
-    if (output != null) {
-      File(output).writeAsBytesSync(decrypted);
-    } else {
-      stdout.add(decrypted);
-    }
+    writeToOut(results, decrypted);
   } else {
     final keyPair = await YubikeyX25519Keypair.fromCard(smartCardInterface);
     stdout.writeln(keyPair.publicKey);
+  }
+}
+
+void writeToOut(ArgResults results, List<int> bytes) {
+  final output = results['output'];
+  if (output != null) {
+    File(output).writeAsBytesSync(bytes);
+  } else {
+    stdout.add(bytes);
   }
 }
 
