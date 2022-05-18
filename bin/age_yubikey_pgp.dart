@@ -1,15 +1,13 @@
 import 'dart:io';
 
 import 'package:age_yubikey_pgp/age_yubikey_pgp.dart';
-import 'package:age_yubikey_pgp/src/age/file.dart';
-import 'package:age_yubikey_pgp/src/age/keypair.dart';
-import 'package:age_yubikey_pgp/src/age/plugin.dart';
 import 'package:age_yubikey_pgp/src/yubikey/age/pin_provider.dart';
 import 'package:age_yubikey_pgp/src/yubikey/age/plugin.dart';
 import 'package:age_yubikey_pgp/src/yubikey/smartcard/smartcard.dart';
 import 'package:age_yubikey_pgp/src/yubikey/yubikey_smartcard_command.dart';
 import 'package:age_yubikey_pgp/src/yubikey/yubikey_smartcard_interface.dart';
 import 'package:args/args.dart';
+import 'package:dage/dage.dart';
 import 'package:logging/logging.dart';
 
 final logger = Logger('AgeYubikeyPGP');

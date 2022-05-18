@@ -2,10 +2,8 @@ library yubikey_age;
 
 import 'dart:typed_data';
 
-import 'package:age_yubikey_pgp/src/age/keypair.dart';
-import 'package:age_yubikey_pgp/src/age/plugin.dart';
-import 'package:age_yubikey_pgp/src/age/stanza.dart';
 import 'package:cryptography/cryptography.dart';
+import 'package:dage/dage.dart';
 
 import '../../util.dart';
 import '../yubikey_smartcard_interface.dart';

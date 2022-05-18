@@ -2,11 +2,10 @@ import 'dart:io';
 import 'dart:typed_data';
 
 import 'package:age_yubikey_pgp/age_yubikey_pgp.dart';
-import 'package:age_yubikey_pgp/src/age/keypair.dart';
-import 'package:age_yubikey_pgp/src/age/random.dart';
 import 'package:age_yubikey_pgp/src/yubikey/yubikey_smartcard_interface.dart';
 import 'package:convert/convert.dart';
 import 'package:cryptography/cryptography.dart';
+import 'package:dage/dage.dart';
 import 'package:logging/logging.dart';
 
 import 'yubikey/yubikey_smartcard_interface_test.mocks.dart';
@@ -37,11 +36,4 @@ void registerPluginsMock() {
     }
   });
   registerPlugins(smartCardInterface);
-}
-
-class ConstAgeRandom implements AgeRandom {
-  @override
-  Uint8List bytes(int length) {
-    return Uint8List.fromList(List.generate(length, (index) => 0x01));
-  }
 }
