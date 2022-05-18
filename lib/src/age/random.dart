@@ -2,11 +2,7 @@ import 'dart:math';
 import 'dart:typed_data';
 
 class AgeRandom {
-  static final AgeRandom _singleton = AgeRandom._internal();
-
-  AgeRandom._internal();
-
-  factory AgeRandom() => _singleton;
+  const AgeRandom();
 
   Uint8List bytes(int length) {
     final random = Random.secure();

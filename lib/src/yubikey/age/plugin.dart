@@ -1,6 +1,5 @@
 library yubikey_age;
 
-import 'dart:io';
 import 'dart:typed_data';
 
 import 'package:age_yubikey_pgp/src/age/keypair.dart';
@@ -15,9 +14,8 @@ class YubikeyPgpAgePlugin extends AgePlugin {
   static const publicKeyPrefix = 'age1yubikey1pgp';
   static const tag = 'YUBIX25519';
   final YubikeySmartCardInterface _interface;
-  final YubikeyPinProvider _pinProvider;
 
-  YubikeyPgpAgePlugin(this._interface, this._pinProvider);
+  YubikeyPgpAgePlugin(this._interface);
 
   @override
   Future<AgeStanza?> createStanza(
@@ -27,7 +25,7 @@ class YubikeyPgpAgePlugin extends AgePlugin {
       return null;
     }
     return YubikeyX25519Stanza.create(_interface, recipient.publicKeyBytes,
-        symmetricFileKey, _pinProvider, ephemeralKeyPair);
+        symmetricFileKey, ephemeralKeyPair);
   }
 
   @override
@@ -35,30 +33,8 @@ class YubikeyPgpAgePlugin extends AgePlugin {
     if (arguments[0] != tag) {
       return null;
     }
-    return YubikeyX25519Stanza._(
-        base64RawDecode(arguments[1]), body, _interface, _pinProvider);
-  }
-}
-
-abstract class YubikeyPinProvider {
-  String providePin();
-
-  String provideAdminPin();
-}
-
-class PromptYubikeyPinProvider extends YubikeyPinProvider {
-  @override
-  String provideAdminPin() {
-    print('Enter admin pin:');
-    stdin.echoMode = false;
-    return stdin.readLineSync()!;
-  }
-
-  @override
-  String providePin() {
-    print('Enter pin:');
-    stdin.echoMode = false;
-    return stdin.readLineSync()!;
+    return YubikeyX25519Stanza._internal(
+        base64RawDecode(arguments[1]), body, _interface);
   }
 }
 
@@ -67,10 +43,8 @@ class YubikeyX25519Keypair extends AgeKeypair {
       : super(null, null, publicKey, YubikeyPgpAgePlugin.publicKeyPrefix);
 
   static Future<YubikeyX25519Keypair> generate(
-      YubikeySmartCardInterface smartCardInterface,
-      YubikeyPinProvider pinProvider) async {
-    final publicKey =
-        await smartCardInterface.generateKeyPair(pinProvider.provideAdminPin());
+      YubikeySmartCardInterface smartCardInterface) async {
+    final publicKey = await smartCardInterface.generateKeyPair();
     return YubikeyX25519Keypair(publicKey);
   }
 
@@ -88,25 +62,20 @@ class YubikeyX25519Stanza extends AgeStanza {
   final Uint8List _ephemeralPublicKey;
   final Uint8List _wrappedKey;
   final YubikeySmartCardInterface _interface;
-  final YubikeyPinProvider _pinProvider;
 
-  YubikeyX25519Stanza._(this._ephemeralPublicKey, this._wrappedKey,
-      this._interface, this._pinProvider)
-      : super();
+  YubikeyX25519Stanza._internal(
+      this._ephemeralPublicKey, this._wrappedKey, this._interface);
 
-  static Future<YubikeyX25519Stanza> create(
-      YubikeySmartCardInterface interface,
-      Uint8List recipientPublicKey,
-      Uint8List symmetricFileKey,
-      YubikeyPinProvider pinProvider,
+  static Future<YubikeyX25519Stanza> create(YubikeySmartCardInterface interface,
+      Uint8List recipientPublicKey, Uint8List symmetricFileKey,
       [SimpleKeyPair? ephemeralKeyPair]) async {
     ephemeralKeyPair ??= await _algorithm.newKeyPair();
     final ephemeralPublicKey = await ephemeralKeyPair.extractPublicKey();
-    final derivedKey = await _deriveKey(interface, recipientPublicKey,
-        pinProvider.providePin(), ephemeralKeyPair);
+    final derivedKey =
+        await _deriveKey(interface, recipientPublicKey, ephemeralKeyPair);
     final wrappedKey = await _wrap(symmetricFileKey, derivedKey);
-    return YubikeyX25519Stanza._(Uint8List.fromList(ephemeralPublicKey.bytes),
-        wrappedKey, interface, pinProvider);
+    return YubikeyX25519Stanza._internal(
+        Uint8List.fromList(ephemeralPublicKey.bytes), wrappedKey, interface);
   }
 
   @override
@@ -125,9 +94,8 @@ class YubikeyX25519Stanza extends AgeStanza {
   }
 
   static Future<SecretKey> _deriveKey(YubikeySmartCardInterface interface,
-      Uint8List recipientPublicKey, String pin, SimpleKeyPair keyPair) async {
-    final sharedSecret =
-        await _sharedSecret(interface, recipientPublicKey, pin);
+      Uint8List recipientPublicKey, SimpleKeyPair keyPair) async {
+    final sharedSecret = await _sharedSecret(interface, recipientPublicKey);
     final hkdfAlgorithm = Hkdf(
       hmac: Hmac(Sha256()),
       outputLength: 32,
@@ -138,10 +106,10 @@ class YubikeyX25519Stanza extends AgeStanza {
     return derivedKey;
   }
 
-  static Future<SecretKey> _sharedSecret(YubikeySmartCardInterface interface,
-      Uint8List recipientPublicKey, String pin) async {
+  static Future<SecretKey> _sharedSecret(
+      YubikeySmartCardInterface interface, Uint8List recipientPublicKey) async {
     final sharedSecret =
-        await interface.calculateSharedSecret(recipientPublicKey, pin);
+        await interface.calculateSharedSecret(recipientPublicKey);
     return SecretKey(sharedSecret);
   }
 
@@ -149,8 +117,8 @@ class YubikeyX25519Stanza extends AgeStanza {
   Future<Uint8List> decryptedFileKey(AgeKeypair recipient) async {
     final ephemeralPublicKey =
         SimplePublicKey(_ephemeralPublicKey, type: KeyPairType.x25519);
-    final sharedSecret = await _sharedSecret(
-        _interface, recipient.publicKeyBytes, _pinProvider.providePin());
+    final sharedSecret =
+        await _sharedSecret(_interface, recipient.publicKeyBytes);
 
     final hkdfAlgorithm = Hkdf(
       hmac: Hmac(Sha256()),

@@ -1,5 +1,6 @@
 import 'dart:typed_data';
 
+import 'age/pin_provider.dart';
 import 'smartcard/curve.dart';
 import 'smartcard/keyslot.dart';
 import 'smartcard/smartcard.dart';
@@ -9,43 +10,43 @@ import 'yubikey_smartcard_command.dart';
 class YubikeySmartCardInterface {
   final YubikeySmartCardCommand _yubikeyCommand;
   final SmartCardInterface _smartCardInterface;
+  final PinProvider _pinProvider;
 
-  YubikeySmartCardInterface(this._smartCardInterface, this._yubikeyCommand);
+  YubikeySmartCardInterface(
+      this._smartCardInterface, this._yubikeyCommand, this._pinProvider);
 
-  Future<Uint8List> generateKeyPair(String adminPin) async {
-    final verifyPin = _yubikeyCommand.verifyAdmin(adminPin);
-    await _smartCardInterface.sendApduToCard(verifyPin);
+  Future<Uint8List> generateKeyPair() async {
+    final verifyPin = _yubikeyCommand.verifyAdmin(_pinProvider.adminPin());
+    await _smartCardInterface.sendCommand(verifyPin);
     var publicKey = _generateECKey(KeySlot.encryption, ECCurve.x25519);
     return publicKey;
   }
 
   Future<Uint8List> getPublicKey() async {
     final command = _yubikeyCommand.getECPublicKey(KeySlot.encryption);
-    final response = await _smartCardInterface.sendApduToCard(command);
+    final response = await _smartCardInterface.sendCommand(command);
     return _getPublicKey(response);
   }
 
-  Future<Uint8List> calculateSharedSecret(
-      Uint8List recipientPublicKey, String pin) async {
-    final verifyPin = _yubikeyCommand.verifyPin(pin);
-    await _smartCardInterface.sendApduToCard(verifyPin);
+  Future<Uint8List> calculateSharedSecret(Uint8List recipientPublicKey) async {
+    final verifyPin = _yubikeyCommand.verifyPin(_pinProvider.pin());
+    await _smartCardInterface.sendCommand(verifyPin);
     final sharedSecretCommand =
         _yubikeyCommand.getSharedSecret(recipientPublicKey);
-    return await _smartCardInterface.sendApduToCard(sharedSecretCommand);
+    return await _smartCardInterface.sendCommand(sharedSecretCommand);
   }
 
   Future<Uint8List> _generateECKey(KeySlot keySlot, ECCurve curve) async {
     final setKeyAttributes = _yubikeyCommand.setKeyAttributes(keySlot, curve);
-    await _smartCardInterface.sendApduToCard(setKeyAttributes);
+    await _smartCardInterface.sendCommand(setKeyAttributes);
 
     final generateKeyCommand = _yubikeyCommand.generateKey(keySlot);
-    final response =
-        await _smartCardInterface.sendApduToCard(generateKeyCommand);
+    final response = await _smartCardInterface.sendCommand(generateKeyCommand);
 
     final publicKey = _getPublicKey(response);
     final setFingerprintCommand =
         _yubikeyCommand.setFingerprint(keySlot, curve, publicKey);
-    await _smartCardInterface.sendApduToCard(setFingerprintCommand);
+    await _smartCardInterface.sendCommand(setFingerprintCommand);
 
     return publicKey;
   }

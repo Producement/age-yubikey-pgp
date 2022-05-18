@@ -12,16 +12,21 @@ import 'package:logging/logging.dart';
 import 'package:meta/meta.dart';
 
 class AgeFile {
-  final Logger logger = Logger('AgeFile');
+  static final Logger logger = Logger('AgeFile');
   final Uint8List _content;
+  final AgeRandom random;
 
-  AgeFile(this._content);
+  AgeFile(this._content, {this.random = const AgeRandom()});
 
   Future<Uint8List> decrypt(List<AgeKeypair> identities) async {
     final headerAndPayload = String.fromCharCodes(_content)
         .split('\n')
         .splitAfter((element) => element.startsWith('---'))
         .toList();
+    if (headerAndPayload.length != 2) {
+      throw Exception(
+          'Something went wrong with parsing: ${headerAndPayload.length}');
+    }
     final header = AgeHeader.parse(headerAndPayload[0].join('\n'));
     Uint8List? symmetricFileKey;
     for (var identity in identities) {
@@ -48,13 +53,13 @@ class AgeFile {
       {Uint8List? symmetricFileKey,
       SimpleKeyPair? keyPair,
       Uint8List? payloadNonce}) async {
-    symmetricFileKey ??= AgeRandom().bytes(16);
+    symmetricFileKey ??= random.bytes(16);
     final stanzas =
         await Future.wait<AgeStanza>(recipients.map((recipient) async {
       return AgePlugin.stanzaCreate(recipient, symmetricFileKey!, keyPair);
     }));
     final header = await AgeHeader.create(stanzas, symmetricFileKey);
-    payloadNonce ??= AgeRandom().bytes(16);
+    payloadNonce ??= random.bytes(16);
     return Uint8List.fromList((await header.serialize()).codeUnits +
         '\n'.codeUnits +
         await _encryptPayload(
