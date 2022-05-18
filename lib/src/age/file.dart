@@ -18,7 +18,7 @@ class AgeFile {
 
   Uint8List get content => _content;
 
-  Future<Uint8List> decrypt(List<AgeKeypair> identities) async {
+  Future<Uint8List> decrypt(List<AgeKeyPair> keyPairs) async {
     final headerAndPayload = String.fromCharCodes(_content)
         .split('\n')
         .splitAfter((element) => element.startsWith('---'))
@@ -29,10 +29,10 @@ class AgeFile {
     }
     final header = AgeHeader.parse(headerAndPayload[0].join('\n'));
     Uint8List? symmetricFileKey;
-    for (var identity in identities) {
+    for (var keyPair in keyPairs) {
       for (var stanza in header.stanzas) {
         try {
-          symmetricFileKey = await stanza.decryptedFileKey(identity);
+          symmetricFileKey = await stanza.decryptedFileKey(keyPair);
         } catch (e, stacktrace) {
           logger.warning(stacktrace);
           //Ignore
@@ -48,7 +48,8 @@ class AgeFile {
         symmetricFileKey: symmetricFileKey);
   }
 
-  static Future<AgeFile> encrypt(Uint8List payload, List<AgeKeypair> recipients,
+  static Future<AgeFile> encrypt(
+      Uint8List payload, List<AgeRecipient> recipients,
       {AgeRandom random = const AgeRandom(), SimpleKeyPair? keyPair}) async {
     final symmetricFileKey = random.bytes(16);
     final stanzas =
@@ -115,7 +116,6 @@ class AgeFile {
 
     final joinEncrypted = encrypted
         .reduce((value, element) => Uint8List.fromList(value + element));
-    print(Uint8List.fromList(nonce + joinEncrypted));
     return Uint8List.fromList(nonce + joinEncrypted);
   }
 }

@@ -21,5 +21,5 @@ abstract class AgeStanza {
 
   Future<String> serialize();
 
-  Future<Uint8List> decryptedFileKey(AgeKeypair recipient);
+  Future<Uint8List> decryptedFileKey(AgeKeyPair keyPair);
 }

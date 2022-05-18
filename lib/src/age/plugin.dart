@@ -13,10 +13,12 @@ abstract class AgePlugin {
     _plugins.add(p);
   }
 
+  Future<AgeKeyPair?> identityToKeyPair(AgeIdentity identity);
+
   AgeStanza? parseStanza(List<String> arguments, Uint8List body);
 
   Future<AgeStanza?> createStanza(
-      AgeKeypair recipient, Uint8List symmetricFileKey,
+      AgeRecipient recipient, Uint8List symmetricFileKey,
       [SimpleKeyPair? ephemeralKeyPair]);
 
   static AgeStanza? stanzaParse(List<String> arguments, Uint8List body) {
@@ -30,7 +32,7 @@ abstract class AgePlugin {
   }
 
   static Future<AgeStanza> stanzaCreate(
-      AgeKeypair recipient, Uint8List symmetricFileKey,
+      AgeRecipient recipient, Uint8List symmetricFileKey,
       [SimpleKeyPair? ephemeralKeyPair]) async {
     for (var plugin in _plugins) {
       final stanza = await plugin.createStanza(
@@ -40,5 +42,16 @@ abstract class AgePlugin {
       }
     }
     throw Exception('Could not create stanza!');
+  }
+
+  static Future<AgeKeyPair> convertIdentityToKeyPair(
+      AgeIdentity identity) async {
+    for (var plugin in _plugins) {
+      final keyPair = await plugin.identityToKeyPair(identity);
+      if (keyPair != null) {
+        return keyPair;
+      }
+    }
+    throw Exception('Could not create key pair!');
   }
 }

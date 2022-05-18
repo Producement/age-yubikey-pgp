@@ -15,7 +15,7 @@ void main() {
   test('create age recipient stanza', () async {
     final ephemeralKeyPair = await algorithm.newKeyPairFromSeed(Uint8List(32));
     final stanza = await X25519AgeStanza.create(
-        recipientKeyPair.publicKeyBytes, symmetricFileKey, ephemeralKeyPair);
+        recipientKeyPair.recipientBytes, symmetricFileKey, ephemeralKeyPair);
     expect(await stanza.serialize(), equals(serializedStanza));
   });
 

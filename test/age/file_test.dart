@@ -24,7 +24,7 @@ void main() {
   test('encrypt', () async {
     final ephemeralKeyPair = await algorithm.newKeyPairFromSeed(Uint8List(32));
     var encrypted = await AgeFile.encrypt(
-        Uint8List.fromList('sinu ema'.codeUnits), [recipientKeyPair],
+        Uint8List.fromList('sinu ema'.codeUnits), [recipient],
         random: ConstAgeRandom(), keyPair: ephemeralKeyPair);
     expect(encrypted.content, orderedEquals(encryptedFile));
   });

@@ -8,6 +8,7 @@ import 'plugin.dart';
 import 'stanza.dart';
 
 class X25519AgePlugin extends AgePlugin {
+  static final algorithm = X25519();
   static const publicKeyPrefix = 'age';
   static const privateKeyPrefix = 'AGE-SECRET-KEY-';
 
@@ -21,26 +22,27 @@ class X25519AgePlugin extends AgePlugin {
 
   @override
   Future<AgeStanza?> createStanza(
-      AgeKeypair recipient, Uint8List symmetricFileKey,
+      AgeRecipient recipient, Uint8List symmetricFileKey,
       [SimpleKeyPair? ephemeralKeyPair]) async {
-    if (recipient.publicKeyPrefix != publicKeyPrefix) {
+    if (recipient.prefix != publicKeyPrefix) {
       return null;
     }
     return X25519AgeStanza.create(
-        recipient.publicKeyBytes, symmetricFileKey, ephemeralKeyPair);
+        recipient.bytes, symmetricFileKey, ephemeralKeyPair);
   }
-}
 
-class X25519Keypair extends AgeKeypair {
-  X25519Keypair(Uint8List? privateKey, Uint8List publicKey)
-      : super(privateKey, X25519AgePlugin.privateKeyPrefix, publicKey,
-            X25519AgePlugin.publicKeyPrefix);
+  @override
+  Future<AgeKeyPair?> identityToKeyPair(AgeIdentity identity) async {
+    final simpleKeyPair = await algorithm.newKeyPairFromSeed(identity.bytes);
+    final publicKey = await simpleKeyPair.extractPublicKey();
+    return AgeKeyPair(identity,
+        AgeRecipient(publicKeyPrefix, Uint8List.fromList(publicKey.bytes)));
+  }
 }
 
 class X25519AgeStanza extends AgeStanza {
   static const _info = 'age-encryption.org/v1/X25519';
   static const _algorithmTag = 'X25519';
-  static final _algorithm = X25519();
   final Uint8List _ephemeralPublicKey;
   final Uint8List _wrappedKey;
 
@@ -49,7 +51,7 @@ class X25519AgeStanza extends AgeStanza {
   static Future<X25519AgeStanza> create(
       Uint8List recipientPublicKey, Uint8List symmetricFileKey,
       [SimpleKeyPair? ephemeralKeyPair]) async {
-    ephemeralKeyPair ??= await _algorithm.newKeyPair();
+    ephemeralKeyPair ??= await X25519AgePlugin.algorithm.newKeyPair();
     final ephemeralPublicKey = await ephemeralKeyPair.extractPublicKey();
     final derivedKey = await _deriveKey(recipientPublicKey, ephemeralKeyPair);
     final wrappedKey = await _wrap(symmetricFileKey, derivedKey);
@@ -89,27 +91,27 @@ class X25519AgeStanza extends AgeStanza {
       Uint8List recipientPublicKey, SimpleKeyPair ephemeralKeypair) async {
     final remotePublicKey =
         SimplePublicKey(recipientPublicKey, type: KeyPairType.x25519);
-    var sharedSecret = await _algorithm.sharedSecretKey(
+    var sharedSecret = await X25519AgePlugin.algorithm.sharedSecretKey(
         keyPair: ephemeralKeypair, remotePublicKey: remotePublicKey);
     return sharedSecret;
   }
 
   @override
-  Future<Uint8List> decryptedFileKey(AgeKeypair recipient) async {
-    final keyPair = SimpleKeyPairData(recipient.privateKeyBytes!,
+  Future<Uint8List> decryptedFileKey(AgeKeyPair keyPair) async {
+    final simpleKeyPair = SimpleKeyPairData(keyPair.identityBytes!,
         publicKey:
-            SimplePublicKey(recipient.publicKeyBytes, type: KeyPairType.x25519),
+            SimplePublicKey(keyPair.recipientBytes, type: KeyPairType.x25519),
         type: KeyPairType.x25519);
     final ephemeralPublicKey =
         SimplePublicKey(_ephemeralPublicKey, type: KeyPairType.x25519);
-    final sharedSecret = await _algorithm.sharedSecretKey(
-        keyPair: keyPair, remotePublicKey: ephemeralPublicKey);
+    final sharedSecret = await X25519AgePlugin.algorithm.sharedSecretKey(
+        keyPair: simpleKeyPair, remotePublicKey: ephemeralPublicKey);
 
     final hkdfAlgorithm = Hkdf(
       hmac: Hmac(Sha256()),
       outputLength: 32,
     );
-    final salt = ephemeralPublicKey.bytes + recipient.publicKeyBytes;
+    final salt = ephemeralPublicKey.bytes + keyPair.recipientBytes;
     final derivedKey = await hkdfAlgorithm.deriveKey(
         secretKey: sharedSecret, info: _info.codeUnits, nonce: salt);
     final wrappingAlgorithm = Chacha20.poly1305Aead();
