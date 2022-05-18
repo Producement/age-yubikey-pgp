@@ -4,8 +4,10 @@ import 'package:age_yubikey_pgp/src/age/stanza.dart';
 import 'package:age_yubikey_pgp/src/util.dart';
 import 'package:collection/collection.dart';
 import 'package:cryptography/cryptography.dart';
+import 'package:logging/logging.dart';
 
 class AgeHeader {
+  static final logger = Logger('AgeHeader');
   static const _version = 'age-encryption.org/v1';
   static final _macSeparator = '---';
   final List<AgeStanza> _stanzas;
@@ -19,6 +21,7 @@ class AgeHeader {
       List<AgeStanza> stanzas, Uint8List symmetricFileKey) async {
     final mac =
         await _calculateMac(await headerWithoutMac(stanzas), symmetricFileKey);
+    logger.fine('Calculated mac: $mac');
     return AgeHeader._(stanzas, mac);
   }
 
@@ -37,6 +40,7 @@ class AgeHeader {
         stanzaContent.splitBefore((line) => line.startsWith('->'));
     final stanzas = stanzaLines.map((e) => AgeStanza.parse(e.join('\n')));
     final mac = headerLines.last.replaceFirst('$_macSeparator ', '');
+    logger.fine('Parsed mac: $mac');
     return AgeHeader._(stanzas.toList(), mac);
   }
 
@@ -57,6 +61,7 @@ class AgeHeader {
   Future<void> checkMac(Uint8List symmetricFileKey) async {
     final mac =
         await _calculateMac(await headerWithoutMac(_stanzas), symmetricFileKey);
+    logger.fine('Calculated mac: $mac, parsed mac: $_mac');
     assert(mac == _mac, 'Incorrect mac');
   }
 

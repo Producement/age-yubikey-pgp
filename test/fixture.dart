@@ -1,3 +1,4 @@
+import 'dart:io';
 import 'dart:typed_data';
 
 import 'package:age_yubikey_pgp/age_yubikey_pgp.dart';
@@ -6,6 +7,7 @@ import 'package:age_yubikey_pgp/src/age/random.dart';
 import 'package:age_yubikey_pgp/src/yubikey/yubikey_smartcard_interface.dart';
 import 'package:convert/convert.dart';
 import 'package:cryptography/cryptography.dart';
+import 'package:logging/logging.dart';
 
 import 'yubikey/yubikey_smartcard_interface_test.mocks.dart';
 
@@ -23,7 +25,19 @@ final symmetricFileKey =
 final smartCardInterface = YubikeySmartCardInterface(
     MockSmartCardInterface(), MockYubikeySmartCardCommand(), MockPinProvider());
 
-void registerPluginsMock() => registerPlugins(smartCardInterface);
+void registerPluginsMock() {
+  Logger.root.level = Level.ALL;
+  Logger.root.onRecord.listen((record) {
+    stderr.writeln(record);
+    if (record.error != null) {
+      stderr.writeln(record.error);
+    }
+    if (record.stackTrace != null) {
+      stderr.writeln(record.stackTrace);
+    }
+  });
+  registerPlugins(smartCardInterface);
+}
 
 class ConstAgeRandom implements AgeRandom {
   @override

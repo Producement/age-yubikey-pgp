@@ -1,6 +1,7 @@
 import 'dart:typed_data';
 
 import 'package:cryptography/cryptography.dart';
+import 'package:logging/logging.dart';
 
 import '../util.dart';
 import 'keypair.dart';
@@ -41,6 +42,7 @@ class X25519AgePlugin extends AgePlugin {
 }
 
 class X25519AgeStanza extends AgeStanza {
+  static final logger = Logger('X25519AgeStanza');
   static const _info = 'age-encryption.org/v1/X25519';
   static const _algorithmTag = 'X25519';
   final Uint8List _ephemeralPublicKey;
@@ -51,6 +53,7 @@ class X25519AgeStanza extends AgeStanza {
   static Future<X25519AgeStanza> create(
       Uint8List recipientPublicKey, Uint8List symmetricFileKey,
       [SimpleKeyPair? ephemeralKeyPair]) async {
+    logger.info('Creating stanza');
     ephemeralKeyPair ??= await X25519AgePlugin.algorithm.newKeyPair();
     final ephemeralPublicKey = await ephemeralKeyPair.extractPublicKey();
     final derivedKey = await _deriveKey(recipientPublicKey, ephemeralKeyPair);

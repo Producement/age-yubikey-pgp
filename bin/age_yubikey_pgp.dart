@@ -12,9 +12,17 @@ import 'package:age_yubikey_pgp/src/yubikey/yubikey_smartcard_interface.dart';
 import 'package:args/args.dart';
 import 'package:logging/logging.dart';
 
+final logger = Logger('AgeYubikeyPGP');
+
 void main(List<String> arguments) async {
   Logger.root.onRecord.listen((record) {
-    stderr.writeln('${record.level.name}: ${record.time}: ${record.message}');
+    stderr.writeln(record);
+    if (record.error != null) {
+      stderr.writeln(record.error);
+    }
+    if (record.stackTrace != null) {
+      stderr.writeln(record.stackTrace);
+    }
   });
 
   final pinProvider = PromptPinProvider();
@@ -28,31 +36,41 @@ void main(List<String> arguments) async {
     Logger.root.level = Level.FINE;
   }
 
-  if (results['generate']) {
-    final recipient = await YubikeyPgpAgePlugin.generate(smartCardInterface);
-    stdout.writeln(recipient.bytes);
-  } else if (results['encrypt']) {
-    final input = File(results.rest.last).readAsBytesSync();
-    final recipients = results['recipient'] as List<String>;
-    final keyPairs =
-        recipients.map((recipient) => AgeRecipient.fromBech32(recipient));
-    final encrypted = await AgeFile.encrypt(input, keyPairs.toList());
-    writeToOut(results, encrypted.content);
-  } else if (results['decrypt']) {
-    final input = File(results.rest.last).readAsBytesSync();
-    final newFile = AgeFile(input);
-    if (results['identity'] != null) {
-      final identities = await getIdentities(results, smartCardInterface);
-      final decrypted = await newFile.decrypt(identities);
-      writeToOut(results, decrypted);
+  try {
+    if (results['generate']) {
+      final recipient = await YubikeyPgpAgePlugin.generate(smartCardInterface);
+      stdout.writeln(recipient.bytes);
+    } else if (results['encrypt']) {
+      final input = File(results.rest.last).readAsBytesSync();
+      final recipients = results['recipient'] as List<String>;
+      var keyPairs =
+          recipients.map((recipient) => AgeRecipient.fromBech32(recipient));
+      if (keyPairs.isEmpty) {
+        keyPairs = [await YubikeyPgpAgePlugin.fromCard(smartCardInterface)];
+      }
+      final encrypted = await AgeFile.encrypt(input, keyPairs.toList());
+      writeToOut(results, encrypted.content);
+    } else if (results['decrypt']) {
+      final input = File(results.rest.last).readAsBytesSync();
+      final newFile = AgeFile(input);
+      final identityList = results['identity'] as List<String>;
+      if (identityList.isNotEmpty) {
+        final identities = await getIdentities(results, smartCardInterface);
+        final decrypted = await newFile.decrypt(identities);
+        writeToOut(results, decrypted);
+      } else {
+        final recipient =
+            await YubikeyPgpAgePlugin.fromCard(smartCardInterface);
+        final decrypted = await newFile.decrypt([recipient.asKeyPair()]);
+        writeToOut(results, decrypted);
+      }
     } else {
       final recipient = await YubikeyPgpAgePlugin.fromCard(smartCardInterface);
-      final decrypted = await newFile.decrypt([recipient.asKeyPair()]);
-      writeToOut(results, decrypted);
+      stdout.writeln(recipient);
     }
-  } else {
-    final recipient = await YubikeyPgpAgePlugin.fromCard(smartCardInterface);
-    stdout.writeln(recipient.bytes);
+  } catch (e, stacktrace) {
+    logger.severe('Did not finish successfully', e, stacktrace);
+    exit(1);
   }
 }
 

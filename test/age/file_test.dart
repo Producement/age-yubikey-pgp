@@ -1,3 +1,4 @@
+import 'dart:convert';
 import 'dart:typed_data';
 
 import 'package:age_yubikey_pgp/src/age/file.dart';
@@ -33,5 +34,13 @@ void main() {
     final file = AgeFile(Uint8List.fromList(encryptedFile));
     final decrypted = await file.decrypt([recipientKeyPair]);
     expect(String.fromCharCodes(decrypted), equals('sinu ema'));
+  });
+
+  test('encrypts and decrypts multiple chunks', () async {
+    final bigFile =
+        Uint8List.fromList(List.generate(1024 * 100, (index) => 0x01));
+    var encrypted = await AgeFile.encrypt(bigFile, [recipient]);
+    final decrypted = await encrypted.decrypt([recipientKeyPair]);
+    expect(decrypted, orderedEquals(bigFile));
   });
 }
