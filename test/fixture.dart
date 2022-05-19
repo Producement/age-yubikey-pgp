@@ -22,7 +22,8 @@ final symmetricFileKey =
     Uint8List.fromList(hex.decode('3055884752f3bb977b673798c6521579'));
 
 final smartCardInterface = YubikeySmartCardInterface(
-    MockSmartCardInterface(), MockYubikeySmartCardCommand(), MockPinProvider());
+    MockSmartCardInterface(), MockYubikeySmartCardCommand(),
+    pinProvider: MockPinProvider());
 
 void registerPluginsMock() {
   Logger.root.level = Level.ALL;

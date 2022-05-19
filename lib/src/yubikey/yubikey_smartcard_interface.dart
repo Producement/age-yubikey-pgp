@@ -1,6 +1,6 @@
 import 'dart:typed_data';
 
-import 'age/pin_provider.dart';
+import 'pin_provider.dart';
 import 'smartcard/curve.dart';
 import 'smartcard/keyslot.dart';
 import 'smartcard/smartcard.dart';
@@ -10,13 +10,13 @@ import 'yubikey_smartcard_command.dart';
 class YubikeySmartCardInterface {
   final YubikeySmartCardCommand _yubikeyCommand;
   final SmartCardInterface _smartCardInterface;
-  final PinProvider _pinProvider;
+  final PinProvider pinProvider;
 
-  YubikeySmartCardInterface(
-      this._smartCardInterface, this._yubikeyCommand, this._pinProvider);
+  YubikeySmartCardInterface(this._smartCardInterface, this._yubikeyCommand,
+      {this.pinProvider = const PinProvider()});
 
   Future<Uint8List> generateKeyPair() async {
-    final verifyPin = _yubikeyCommand.verifyAdmin(_pinProvider.adminPin());
+    final verifyPin = _yubikeyCommand.verifyAdmin(pinProvider.adminPin());
     await _smartCardInterface.sendCommand(verifyPin);
     var publicKey = _generateECKey(KeySlot.encryption, ECCurve.x25519);
     return publicKey;
@@ -29,7 +29,7 @@ class YubikeySmartCardInterface {
   }
 
   Future<Uint8List> calculateSharedSecret(Uint8List recipientPublicKey) async {
-    final verifyPin = _yubikeyCommand.verifyPin(_pinProvider.pin());
+    final verifyPin = _yubikeyCommand.verifyPin(pinProvider.pin());
     await _smartCardInterface.sendCommand(verifyPin);
     final sharedSecretCommand =
         _yubikeyCommand.getSharedSecret(recipientPublicKey);

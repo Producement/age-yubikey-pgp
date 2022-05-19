@@ -39,7 +39,9 @@ class YubikeyPgpAgePlugin extends AgePlugin {
   }
 
   @override
-  AgeStanza? parseStanza(List<String> arguments, Uint8List body) {
+  Future<AgeStanza?> parseStanza(List<String> arguments, Uint8List body,
+      {PassphraseProvider passphraseProvider =
+          const PassphraseProvider()}) async {
     if (arguments[0] != tag) {
       return null;
     }
@@ -49,6 +51,14 @@ class YubikeyPgpAgePlugin extends AgePlugin {
 
   @override
   Future<AgeKeyPair?> identityToKeyPair(AgeIdentity identity) async {
+    return null;
+  }
+
+  @override
+  Future<AgeStanza?> createPassphraseStanza(
+      Uint8List symmetricFileKey, Uint8List salt,
+      {PassphraseProvider passphraseProvider =
+          const PassphraseProvider()}) async {
     return null;
   }
 }
@@ -112,7 +122,10 @@ class YubikeyX25519Stanza extends AgeStanza {
   }
 
   @override
-  Future<Uint8List> decryptedFileKey(AgeKeyPair keyPair) async {
+  Future<Uint8List> decryptedFileKey(AgeKeyPair? keyPair) async {
+    if (keyPair == null) {
+      throw Exception('Keypair is mandatory!');
+    }
     final ephemeralPublicKey =
         SimplePublicKey(_ephemeralPublicKey, type: KeyPairType.x25519);
     final sharedSecret =

@@ -5,7 +5,7 @@
 import 'dart:async' as _i7;
 import 'dart:typed_data' as _i3;
 
-import 'package:age_yubikey_pgp/src/yubikey/age/pin_provider.dart' as _i8;
+import 'package:age_yubikey_pgp/src/yubikey/pin_provider.dart' as _i8;
 import 'package:age_yubikey_pgp/src/yubikey/smartcard/curve.dart' as _i5;
 import 'package:age_yubikey_pgp/src/yubikey/smartcard/keyslot.dart' as _i4;
 import 'package:age_yubikey_pgp/src/yubikey/smartcard/smartcard.dart' as _i6;
@@ -92,11 +92,11 @@ class MockPinProvider extends _i1.Mock implements _i8.PinProvider {
   }
 
   @override
-  String pin() =>
-      (super.noSuchMethod(Invocation.method(#pin, []), returnValue: '')
-          as String);
-  @override
   String adminPin() =>
       (super.noSuchMethod(Invocation.method(#adminPin, []), returnValue: '')
+          as String);
+  @override
+  String pin() =>
+      (super.noSuchMethod(Invocation.method(#pin, []), returnValue: '')
           as String);
 }

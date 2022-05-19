@@ -1,6 +1,6 @@
 import 'dart:typed_data';
 
-import 'package:age_yubikey_pgp/src/yubikey/age/pin_provider.dart';
+import 'package:age_yubikey_pgp/src/yubikey/pin_provider.dart';
 import 'package:age_yubikey_pgp/src/yubikey/smartcard/curve.dart';
 import 'package:age_yubikey_pgp/src/yubikey/smartcard/keyslot.dart';
 import 'package:test/test.dart';
@@ -19,7 +19,8 @@ void main() {
   final yubikeyCommand = MockYubikeySmartCardCommand();
   final pinProvider = MockPinProvider();
   final yubikeyInterface = YubikeySmartCardInterface(
-      smartCardInterface, yubikeyCommand, pinProvider);
+      smartCardInterface, yubikeyCommand,
+      pinProvider: pinProvider);
 
   test('generate keypair', () async {
     final adminPin = '12345678';

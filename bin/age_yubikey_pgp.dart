@@ -1,7 +1,6 @@
 import 'dart:io';
 
 import 'package:age_yubikey_pgp/age_yubikey_pgp.dart';
-import 'package:age_yubikey_pgp/src/yubikey/age/pin_provider.dart';
 import 'package:age_yubikey_pgp/src/yubikey/age/plugin.dart';
 import 'package:age_yubikey_pgp/src/yubikey/smartcard/smartcard.dart';
 import 'package:age_yubikey_pgp/src/yubikey/yubikey_smartcard_command.dart';
@@ -23,9 +22,8 @@ void main(List<String> arguments) async {
     }
   });
 
-  final pinProvider = PromptPinProvider();
   final smartCardInterface = YubikeySmartCardInterface(
-      SmartCardInterface(), YubikeySmartCardCommand(), pinProvider);
+      SmartCardInterface(), YubikeySmartCardCommand());
   registerPlugins(smartCardInterface);
 
   final results = parseArguments(arguments);
@@ -39,27 +37,27 @@ void main(List<String> arguments) async {
       final recipient = await YubikeyPgpAgePlugin.generate(smartCardInterface);
       stdout.writeln(recipient.bytes);
     } else if (results['encrypt']) {
-      final input = File(results.rest.last).readAsBytesSync();
+      final input = File(results.rest.last);
       final recipients = results['recipient'] as List<String>;
       var keyPairs =
           recipients.map((recipient) => AgeRecipient.fromBech32(recipient));
       if (keyPairs.isEmpty) {
         keyPairs = [await YubikeyPgpAgePlugin.fromCard(smartCardInterface)];
       }
-      final encrypted = await AgeFile.encrypt(input, keyPairs.toList());
-      writeToOut(results, encrypted.content);
+      final encrypted = AgeFile.encrypt(input.openRead(), keyPairs.toList());
+      writeToOut(results, encrypted);
     } else if (results['decrypt']) {
-      final input = File(results.rest.last).readAsBytesSync();
-      final newFile = AgeFile(input);
+      final input = File(results.rest.last);
+      final newFile = AgeFile(input.openRead());
       final identityList = results['identity'] as List<String>;
       if (identityList.isNotEmpty) {
         final identities = await getIdentities(results, smartCardInterface);
-        final decrypted = await newFile.decrypt(identities);
+        final decrypted = newFile.decrypt(identities);
         writeToOut(results, decrypted);
       } else {
         final recipient =
             await YubikeyPgpAgePlugin.fromCard(smartCardInterface);
-        final decrypted = await newFile.decrypt([recipient.asKeyPair()]);
+        final decrypted = newFile.decrypt([recipient.asKeyPair()]);
         writeToOut(results, decrypted);
       }
     } else {
@@ -84,12 +82,12 @@ Future<List<AgeKeyPair>> getIdentities(
   return keyPairs.toList();
 }
 
-void writeToOut(ArgResults results, List<int> bytes) {
+void writeToOut(ArgResults results, Stream<List<int>> bytes) {
   final output = results['output'];
   if (output != null) {
-    File(output).writeAsBytesSync(bytes);
+    File(output).openWrite().addStream(bytes);
   } else {
-    stdout.add(bytes);
+    stdout.addStream(bytes);
   }
 }
 
