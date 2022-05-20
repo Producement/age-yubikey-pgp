@@ -1,13 +1,14 @@
 import 'dart:io';
 
-import 'package:age_yubikey_pgp/age_yubikey_pgp.dart';
-import 'package:age_yubikey_pgp/src/yubikey/age/plugin.dart';
-import 'package:age_yubikey_pgp/src/yubikey/smartcard/smartcard.dart';
-import 'package:age_yubikey_pgp/src/yubikey/yubikey_smartcard_command.dart';
-import 'package:age_yubikey_pgp/src/yubikey/yubikey_smartcard_interface.dart';
+import 'package:age_yubikey_pgp/interface.dart';
+import 'package:age_yubikey_pgp/pin_provider.dart';
+import 'package:age_yubikey_pgp/plugin.dart';
+import 'package:age_yubikey_pgp/register.dart';
 import 'package:args/args.dart';
 import 'package:dage/dage.dart';
 import 'package:logging/logging.dart';
+import 'package:yubikit_openpgp/interface.dart';
+import 'package:yubikit_openpgp/smartcard/interface.dart';
 
 final logger = Logger('AgeYubikeyPGP');
 
@@ -22,9 +23,9 @@ void main(List<String> arguments) async {
     }
   });
 
-  final smartCardInterface = YubikeySmartCardInterface(
-      SmartCardInterface(), YubikeySmartCardCommand());
-  registerPlugins(smartCardInterface);
+  final smartCardInterface = YubikeyPGPInterface(
+      OpenPGPInterface(SmartCardInterface()), PinProvider());
+  registerPlugin(smartCardInterface);
 
   final results = parseArguments(arguments);
 
@@ -34,34 +35,42 @@ void main(List<String> arguments) async {
 
   try {
     if (results['generate']) {
-      final recipient = await YubikeyPgpAgePlugin.generate(smartCardInterface);
+      final recipient =
+          await YubikeyPgpX2559AgePlugin.generate(smartCardInterface);
       stdout.writeln(recipient.bytes);
     } else if (results['encrypt']) {
-      final input = File(results.rest.last);
       final recipients = results['recipient'] as List<String>;
       var keyPairs =
           recipients.map((recipient) => AgeRecipient.fromBech32(recipient));
       if (keyPairs.isEmpty) {
-        keyPairs = [await YubikeyPgpAgePlugin.fromCard(smartCardInterface)];
+        final recipient =
+            await YubikeyPgpX2559AgePlugin.fromCard(smartCardInterface);
+        if (recipient != null) {
+          keyPairs = [recipient];
+        }
       }
-      final encrypted = AgeFile.encrypt(input.openRead(), keyPairs.toList());
+      final encrypted = encrypt(readFromInput(results), keyPairs.toList());
       writeToOut(results, encrypted);
     } else if (results['decrypt']) {
-      final input = File(results.rest.last);
-      final newFile = AgeFile(input.openRead());
       final identityList = results['identity'] as List<String>;
       if (identityList.isNotEmpty) {
-        final identities = await getIdentities(results, smartCardInterface);
-        final decrypted = newFile.decrypt(identities);
+        final identities = await getIdentities(results);
+        final decrypted = decrypt(readFromInput(results), identities);
         writeToOut(results, decrypted);
       } else {
         final recipient =
-            await YubikeyPgpAgePlugin.fromCard(smartCardInterface);
-        final decrypted = newFile.decrypt([recipient.asKeyPair()]);
-        writeToOut(results, decrypted);
+            await YubikeyPgpX2559AgePlugin.fromCard(smartCardInterface);
+        if (recipient != null) {
+          final decrypted =
+              decrypt(readFromInput(results), [recipient.asKeyPair()]);
+          writeToOut(results, decrypted);
+        } else {
+          throw Exception('Recipient not available!');
+        }
       }
     } else {
-      final recipient = await YubikeyPgpAgePlugin.fromCard(smartCardInterface);
+      final recipient =
+          await YubikeyPgpX2559AgePlugin.fromCard(smartCardInterface);
       stdout.writeln(recipient);
     }
   } catch (e, stacktrace) {
@@ -70,8 +79,7 @@ void main(List<String> arguments) async {
   }
 }
 
-Future<List<AgeKeyPair>> getIdentities(
-    ArgResults results, YubikeySmartCardInterface smartCardInterface) async {
+Future<List<AgeKeyPair>> getIdentities(ArgResults results) async {
   final identityFiles = results['identity'] as List<String>;
   final keyPairs = await Future.wait(identityFiles.map((identityFile) async {
     final content = File(identityFile).readAsLinesSync();
@@ -80,6 +88,15 @@ Future<List<AgeKeyPair>> getIdentities(
         AgeIdentity.fromBech32(key));
   }));
   return keyPairs.toList();
+}
+
+Stream<List<int>> readFromInput(ArgResults results) {
+  if (results.rest.isNotEmpty) {
+    final fileName = results.rest.last;
+    return File(fileName).openRead();
+  } else {
+    return stdin;
+  }
 }
 
 void writeToOut(ArgResults results, Stream<List<int>> bytes) {
