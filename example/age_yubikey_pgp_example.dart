@@ -1,4 +1,4 @@
-import 'package:age_yubikey_pgp/plugin.dart';
+import 'package:age_yubikey_pgp/age_yubikey_pgp.dart';
 import 'package:collection/collection.dart';
 import 'package:dage/dage.dart';
 import 'package:yubikit_openpgp/smartcard/interface.dart';
