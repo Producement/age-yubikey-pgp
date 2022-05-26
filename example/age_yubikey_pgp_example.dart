@@ -1,15 +1,13 @@
 import 'package:age_yubikey_pgp/interface.dart';
-import 'package:age_yubikey_pgp/pin_provider.dart';
 import 'package:age_yubikey_pgp/plugin.dart';
-import 'package:age_yubikey_pgp/register.dart';
 import 'package:collection/collection.dart';
 import 'package:dage/dage.dart';
-import 'package:yubikit_openpgp/interface.dart';
 import 'package:yubikit_openpgp/smartcard/interface.dart';
+import 'package:yubikit_openpgp/yubikit_openpgp.dart';
 
 void main() async {
-  final smartCardInterface = YubikeyPGPInterface(
-      OpenPGPInterface(SmartCardInterface()), PinProvider());
+  const smartCardInterface = AgeYubikeyPGPInterface(
+      YubikitOpenPGP(SmartCardInterface()), PinProvider());
   registerPlugin(smartCardInterface);
 
   // Generate key on card

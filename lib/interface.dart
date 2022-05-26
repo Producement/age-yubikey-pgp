@@ -1,23 +1,21 @@
 import 'dart:typed_data';
 
 import 'package:age_yubikey_pgp/pin_provider.dart';
-import 'package:yubikit_openpgp/curve.dart';
-import 'package:yubikit_openpgp/interface.dart';
-import 'package:yubikit_openpgp/keyslot.dart';
+import 'package:yubikit_openpgp/yubikit_openpgp.dart';
 
-class YubikeyPGPInterface {
-  final OpenPGPInterface _openPGPInterface;
+class AgeYubikeyPGPInterface {
+  final YubikitOpenPGP _openPGPInterface;
   final PinProvider _pinProvider;
 
-  const YubikeyPGPInterface(this._openPGPInterface, this._pinProvider);
+  const AgeYubikeyPGPInterface(this._openPGPInterface, this._pinProvider);
 
-  Future<Uint8List> generateECKey() async {
+  Future<Uint8List> generateECKey(KeySlot keySlot, ECCurve curve) async {
     await _openPGPInterface.verifyAdmin(_pinProvider.adminPin());
-    return _openPGPInterface.generateECKey(KeySlot.encryption, ECCurve.x25519);
+    return _openPGPInterface.generateECKey(keySlot, curve);
   }
 
-  Future<Uint8List?> getECPublicKey() async {
-    return _openPGPInterface.getECPublicKey(KeySlot.encryption);
+  Future<Uint8List?> getECPublicKey(KeySlot keySlot) async {
+    return _openPGPInterface.getECPublicKey(keySlot);
   }
 
   Future<Uint8List> ecSharedSecret(Uint8List recipientPublicKey) async {

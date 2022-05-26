@@ -1,14 +1,12 @@
 import 'dart:io';
 
 import 'package:age_yubikey_pgp/interface.dart';
-import 'package:age_yubikey_pgp/pin_provider.dart';
 import 'package:age_yubikey_pgp/plugin.dart';
-import 'package:age_yubikey_pgp/register.dart';
 import 'package:args/args.dart';
 import 'package:dage/dage.dart';
 import 'package:logging/logging.dart';
-import 'package:yubikit_openpgp/interface.dart';
 import 'package:yubikit_openpgp/smartcard/interface.dart';
+import 'package:yubikit_openpgp/yubikit_openpgp.dart';
 
 final logger = Logger('AgeYubikeyPGP');
 
@@ -23,9 +21,9 @@ void main(List<String> arguments) async {
     }
   });
 
-  final smartCardInterface = YubikeyPGPInterface(
-      OpenPGPInterface(SmartCardInterface()), PinProvider());
-  registerPlugin(smartCardInterface);
+  const interface = AgeYubikeyPGPInterface(
+      YubikitOpenPGP(SmartCardInterface()), PinProvider());
+  registerPlugin(interface);
 
   final results = parseArguments(arguments);
 
@@ -35,16 +33,14 @@ void main(List<String> arguments) async {
 
   try {
     if (results['generate']) {
-      final recipient =
-          await YubikeyPgpX2559AgePlugin.generate(smartCardInterface);
+      final recipient = await YubikeyPgpX2559AgePlugin.generate(interface);
       stdout.writeln(recipient.bytes);
     } else if (results['encrypt']) {
       final recipients = results['recipient'] as List<String>;
       var keyPairs =
           recipients.map((recipient) => AgeRecipient.fromBech32(recipient));
       if (keyPairs.isEmpty) {
-        final recipient =
-            await YubikeyPgpX2559AgePlugin.fromCard(smartCardInterface);
+        final recipient = await YubikeyPgpX2559AgePlugin.fromCard(interface);
         if (recipient != null) {
           keyPairs = [recipient];
         }
@@ -58,8 +54,7 @@ void main(List<String> arguments) async {
         final decrypted = decrypt(readFromInput(results), identities);
         writeToOut(results, decrypted);
       } else {
-        final recipient =
-            await YubikeyPgpX2559AgePlugin.fromCard(smartCardInterface);
+        final recipient = await YubikeyPgpX2559AgePlugin.fromCard(interface);
         if (recipient != null) {
           final decrypted =
               decrypt(readFromInput(results), [recipient.asKeyPair()]);
@@ -69,8 +64,7 @@ void main(List<String> arguments) async {
         }
       }
     } else {
-      final recipient =
-          await YubikeyPgpX2559AgePlugin.fromCard(smartCardInterface);
+      final recipient = await YubikeyPgpX2559AgePlugin.fromCard(interface);
       stdout.writeln(recipient);
     }
   } catch (e, stacktrace) {

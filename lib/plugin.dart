@@ -2,26 +2,32 @@ library age.plugin;
 
 import 'dart:typed_data';
 
-import 'package:age_yubikey_pgp/interface.dart';
+import 'interface.dart';
 import 'package:cryptography/cryptography.dart';
 import 'package:dage/dage.dart';
+import 'package:yubikit_openpgp/curve.dart';
+import 'package:yubikit_openpgp/keyslot.dart';
+
+export 'pin_provider.dart';
+export 'register.dart';
 
 class YubikeyPgpX2559AgePlugin extends AgePlugin {
   static const publicKeyPrefix = 'age1yubikey1pgp';
   static const tag = 'YUBIX25519';
-  final YubikeyPGPInterface _interface;
+  final AgeYubikeyPGPInterface _interface;
 
   YubikeyPgpX2559AgePlugin(this._interface);
 
   static Future<AgeRecipient> generate(
-      YubikeyPGPInterface openPGPInterface) async {
-    final publicKey = await openPGPInterface.generateECKey();
+      AgeYubikeyPGPInterface openPGPInterface) async {
+    final publicKey = await openPGPInterface.generateECKey(
+        KeySlot.encryption, ECCurve.x25519);
     return AgeRecipient(publicKeyPrefix, publicKey);
   }
 
   static Future<AgeRecipient?> fromCard(
-      YubikeyPGPInterface openPGPInterface) async {
-    final publicKey = await openPGPInterface.getECPublicKey();
+      AgeYubikeyPGPInterface openPGPInterface) async {
+    final publicKey = await openPGPInterface.getECPublicKey(KeySlot.encryption);
     if (publicKey == null) {
       return null;
     }
@@ -79,12 +85,12 @@ class YubikeyX25519Stanza extends AgeStanza {
   static final _algorithm = X25519();
   final Uint8List _ephemeralPublicKey;
   final Uint8List _wrappedKey;
-  final YubikeyPGPInterface _interface;
+  final AgeYubikeyPGPInterface _interface;
 
   YubikeyX25519Stanza._internal(
       this._ephemeralPublicKey, this._wrappedKey, this._interface);
 
-  static Future<YubikeyX25519Stanza> create(YubikeyPGPInterface interface,
+  static Future<YubikeyX25519Stanza> create(AgeYubikeyPGPInterface interface,
       Uint8List recipientPublicKey, Uint8List symmetricFileKey,
       [SimpleKeyPair? ephemeralKeyPair]) async {
     ephemeralKeyPair ??= await _algorithm.newKeyPair();
@@ -114,7 +120,7 @@ class YubikeyX25519Stanza extends AgeStanza {
     return body.concatenation(nonce: false);
   }
 
-  static Future<SecretKey> _deriveKey(YubikeyPGPInterface interface,
+  static Future<SecretKey> _deriveKey(AgeYubikeyPGPInterface interface,
       Uint8List recipientPublicKey, SimpleKeyPair keyPair) async {
     final sharedSecret = await _sharedSecret(interface, recipientPublicKey);
     final hkdfAlgorithm = Hkdf(
@@ -128,7 +134,7 @@ class YubikeyX25519Stanza extends AgeStanza {
   }
 
   static Future<SecretKey> _sharedSecret(
-      YubikeyPGPInterface interface, Uint8List recipientPublicKey) async {
+      AgeYubikeyPGPInterface interface, Uint8List recipientPublicKey) async {
     final sharedSecret = await interface.ecSharedSecret(recipientPublicKey);
     if (sharedSecret.every((element) => element == 0x00)) {
       throw Exception('All shared secret bytes are 0x00!');
