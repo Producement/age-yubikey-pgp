@@ -1,11 +1,11 @@
 import 'dart:io';
 
-import 'package:age_yubikey_pgp/interface.dart';
 import 'package:age_yubikey_pgp/plugin.dart';
 import 'package:args/args.dart';
 import 'package:dage/dage.dart';
 import 'package:logging/logging.dart';
 import 'package:yubikit_openpgp/smartcard/interface.dart';
+import 'package:yubikit_openpgp/smartcard/pin_provider.dart';
 import 'package:yubikit_openpgp/yubikit_openpgp.dart';
 
 final logger = Logger('AgeYubikeyPGP');
@@ -21,8 +21,7 @@ void main(List<String> arguments) async {
     }
   });
 
-  const interface = AgeYubikeyPGPInterface(
-      YubikitOpenPGP(SmartCardInterface()), PinProvider());
+  final interface = YubikitOpenPGP(SmartCardInterface(), PinProvider());
   registerPlugin(interface);
 
   final results = parseArguments(arguments);
