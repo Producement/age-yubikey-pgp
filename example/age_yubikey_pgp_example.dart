@@ -1,8 +1,6 @@
 import 'package:age_yubikey_pgp/age_yubikey_pgp.dart';
 import 'package:collection/collection.dart';
 import 'package:dage/dage.dart';
-import 'package:yubikit_openpgp/smartcard/interface.dart';
-import 'package:yubikit_openpgp/smartcard/pin_provider.dart';
 import 'package:yubikit_openpgp/yubikit_openpgp.dart';
 
 void main() async {

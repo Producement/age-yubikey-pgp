@@ -1,3 +1,7 @@
+## 0.0.4
+
+* Fix dage dependency.
+
 ## 0.0.3
 
 * Simplify pin management.

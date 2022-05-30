@@ -4,8 +4,6 @@ import 'package:age_yubikey_pgp/age_yubikey_pgp.dart';
 import 'package:args/args.dart';
 import 'package:dage/dage.dart';
 import 'package:logging/logging.dart';
-import 'package:yubikit_openpgp/smartcard/interface.dart';
-import 'package:yubikit_openpgp/smartcard/pin_provider.dart';
 import 'package:yubikit_openpgp/yubikit_openpgp.dart';
 
 final logger = Logger('AgeYubikeyPGP');
