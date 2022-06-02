@@ -90,8 +90,7 @@ class YubikeyX25519Stanza extends AgeStanza {
       [SimpleKeyPair? ephemeralKeyPair]) async {
     ephemeralKeyPair ??= await _algorithm.newKeyPair();
     final ephemeralPublicKey = await ephemeralKeyPair.extractPublicKey();
-    final derivedKey =
-        await _deriveKey(interface, recipientPublicKey, ephemeralKeyPair);
+    final derivedKey = await _deriveKey(recipientPublicKey, ephemeralKeyPair);
     final wrappedKey = await _wrap(symmetricFileKey, derivedKey);
     return YubikeyX25519Stanza._internal(
       Uint8List.fromList(ephemeralPublicKey.bytes),
@@ -115,22 +114,37 @@ class YubikeyX25519Stanza extends AgeStanza {
     return body.concatenation(nonce: false);
   }
 
-  static Future<SecretKey> _deriveKey(YubikitOpenPGP interface,
-      Uint8List recipientPublicKey, SimpleKeyPair keyPair) async {
-    final sharedSecret = await _sharedSecret(interface, recipientPublicKey);
+  static Future<SecretKey> _sharedSecret(
+      YubikitOpenPGP interface, Uint8List recipientPublicKey) async {
+    final sharedSecret = await interface.ecSharedSecret(recipientPublicKey);
+    if (sharedSecret.every((element) => element == 0x00)) {
+      throw Exception('All shared secret bytes are 0x00!');
+    }
+    return SecretKey(sharedSecret);
+  }
+
+  static Future<SecretKey> _deriveKey(
+      Uint8List recipientPublicKey, SimpleKeyPair ephemeralKeyPair) async {
+    final sharedSecret =
+        await _stanzaSharedSecret(ephemeralKeyPair, recipientPublicKey);
     final hkdfAlgorithm = Hkdf(
       hmac: Hmac(Sha256()),
       outputLength: 32,
     );
-    final salt = (await keyPair.extractPublicKey()).bytes + recipientPublicKey;
+    final salt =
+        (await ephemeralKeyPair.extractPublicKey()).bytes + recipientPublicKey;
     final derivedKey = await hkdfAlgorithm.deriveKey(
         secretKey: sharedSecret, info: _info.codeUnits, nonce: salt);
     return derivedKey;
   }
 
-  static Future<SecretKey> _sharedSecret(
-      YubikitOpenPGP interface, Uint8List recipientPublicKey) async {
-    final sharedSecret = await interface.ecSharedSecret(recipientPublicKey);
+  static Future<SecretKey> _stanzaSharedSecret(
+      SimpleKeyPair ephemeralKeyPair, Uint8List recipientPublicKey) async {
+    final sharedSecretKey = await _algorithm.sharedSecretKey(
+        keyPair: ephemeralKeyPair,
+        remotePublicKey:
+            SimplePublicKey(recipientPublicKey, type: KeyPairType.x25519));
+    final sharedSecret = await sharedSecretKey.extractBytes();
     if (sharedSecret.every((element) => element == 0x00)) {
       throw Exception('All shared secret bytes are 0x00!');
     }
@@ -144,8 +158,8 @@ class YubikeyX25519Stanza extends AgeStanza {
     }
     final ephemeralPublicKey =
         SimplePublicKey(_ephemeralPublicKey, type: KeyPairType.x25519);
-    final sharedSecret =
-        await _sharedSecret(_interface, keyPair.recipientBytes);
+    final sharedSecret = await _sharedSecret(
+        _interface, Uint8List.fromList(ephemeralPublicKey.bytes));
 
     final hkdfAlgorithm = Hkdf(
       hmac: Hmac(Sha256()),

@@ -1,3 +1,5 @@
+import 'dart:convert';
+
 import 'package:age_yubikey_pgp/age_yubikey_pgp.dart';
 import 'package:collection/collection.dart';
 import 'package:dage/dage.dart';
@@ -20,6 +22,6 @@ void main() async {
     // Decrypt
     final decrypted = decrypt(encrypted, [recipientFromCard.asKeyPair()]);
     final asList = await decrypted.toList();
-    assert('Hello World'.codeUnits == asList.flattened);
+    assert('Hello World' == utf8.decode(asList.flattened.toList()));
   }
 }

@@ -1,3 +1,7 @@
+## 0.0.5
+
+* Fix secret key derivation issue.
+
 ## 0.0.4
 
 * Fix dage dependency.
