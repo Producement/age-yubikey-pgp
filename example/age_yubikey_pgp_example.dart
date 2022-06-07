@@ -11,13 +11,14 @@ void main() async {
   registerPlugin(smartCardInterface);
 
   // Generate key on card
-  final recipient = await YubikeyPgpX2559AgePlugin.generate(smartCardInterface);
+  final recipient =
+      await YubikeyPgpX25519AgePlugin.generate(smartCardInterface);
 
   // Encrypt to recipient
   final encrypted = encrypt(Stream.value('Hello World'.codeUnits), [recipient]);
 
   final recipientFromCard =
-      await YubikeyPgpX2559AgePlugin.fromCard(smartCardInterface);
+      await YubikeyPgpX25519AgePlugin.fromCard(smartCardInterface);
   if (recipientFromCard != null) {
     // Decrypt
     final decrypted = decrypt(encrypted, [recipientFromCard.asKeyPair()]);

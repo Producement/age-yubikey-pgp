@@ -12,7 +12,7 @@ dependencies:
   cryptography: ^2.0.5
   logging: ^1.0.2
   dage: ^1.0.4
-  yubikit_openpgp: ^1.0.5
+  yubikit_openpgp: ^1.0.7
   collection: ^1.16.0
 
 dev_dependencies:

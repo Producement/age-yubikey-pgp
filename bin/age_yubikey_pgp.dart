@@ -30,14 +30,14 @@ void main(List<String> arguments) async {
 
   try {
     if (results['generate']) {
-      final recipient = await YubikeyPgpX2559AgePlugin.generate(interface);
+      final recipient = await YubikeyPgpX25519AgePlugin.generate(interface);
       stdout.writeln(recipient.bytes);
     } else if (results['encrypt']) {
       final recipients = results['recipient'] as List<String>;
       var keyPairs =
           recipients.map((recipient) => AgeRecipient.fromBech32(recipient));
       if (keyPairs.isEmpty) {
-        final recipient = await YubikeyPgpX2559AgePlugin.fromCard(interface);
+        final recipient = await YubikeyPgpX25519AgePlugin.fromCard(interface);
         if (recipient != null) {
           keyPairs = [recipient];
         }
@@ -51,7 +51,7 @@ void main(List<String> arguments) async {
         final decrypted = decrypt(readFromInput(results), identities);
         writeToOut(results, decrypted);
       } else {
-        final recipient = await YubikeyPgpX2559AgePlugin.fromCard(interface);
+        final recipient = await YubikeyPgpX25519AgePlugin.fromCard(interface);
         if (recipient != null) {
           final decrypted =
               decrypt(readFromInput(results), [recipient.asKeyPair()]);
@@ -61,7 +61,7 @@ void main(List<String> arguments) async {
         }
       }
     } else {
-      final recipient = await YubikeyPgpX2559AgePlugin.fromCard(interface);
+      final recipient = await YubikeyPgpX25519AgePlugin.fromCard(interface);
       stdout.writeln(recipient);
     }
   } catch (e, stacktrace) {

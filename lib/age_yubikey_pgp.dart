@@ -5,15 +5,15 @@ import 'package:dage/dage.dart';
 import 'package:yubikit_openpgp/yubikit_openpgp.dart';
 
 void registerPlugin(YubikitOpenPGP interface) {
-  AgePlugin.registerPlugin(YubikeyPgpX2559AgePlugin(interface));
+  AgePlugin.registerPlugin(YubikeyPgpX25519AgePlugin(interface));
 }
 
-class YubikeyPgpX2559AgePlugin extends AgePlugin {
+class YubikeyPgpX25519AgePlugin extends AgePlugin {
   static const publicKeyPrefix = 'age1yubikey1pgp';
   static const tag = 'YUBIX25519';
   final YubikitOpenPGP _interface;
 
-  YubikeyPgpX2559AgePlugin(this._interface);
+  YubikeyPgpX25519AgePlugin(this._interface);
 
   static Future<AgeRecipient> generate(YubikitOpenPGP openPGPInterface) async {
     final publicKey = await openPGPInterface.generateECKey(
@@ -76,7 +76,7 @@ class YubikeyPgpX2559AgePlugin extends AgePlugin {
 
 class YubikeyX25519Stanza extends AgeStanza {
   static const _info = 'YUBIX25519';
-  static const _algorithmTag = YubikeyPgpX2559AgePlugin.tag;
+  static const _algorithmTag = YubikeyPgpX25519AgePlugin.tag;
   static final _algorithm = X25519();
   final Uint8List _ephemeralPublicKey;
   final Uint8List _wrappedKey;
