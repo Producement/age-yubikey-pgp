@@ -1,8 +1,11 @@
-import 'dart:typed_data';
-
 import 'package:cryptography/cryptography.dart';
 import 'package:dage/dage.dart';
 import 'package:yubikit_openpgp/yubikit_openpgp.dart';
+
+import 'src/stanza.dart';
+import 'src/wrapped_key.dart';
+
+export 'src/stanza.dart';
 
 void registerPlugin(YubikitOpenPGP interface) {
   AgePlugin.registerPlugin(YubikeyPgpX25519AgePlugin(interface));
@@ -10,7 +13,6 @@ void registerPlugin(YubikitOpenPGP interface) {
 
 class YubikeyPgpX25519AgePlugin extends AgePlugin {
   static const publicKeyPrefix = 'age1yubikey1pgp';
-  static const tag = 'YUBIX25519';
   final YubikitOpenPGP _interface;
 
   YubikeyPgpX25519AgePlugin(this._interface);
@@ -31,7 +33,7 @@ class YubikeyPgpX25519AgePlugin extends AgePlugin {
 
   @override
   Future<AgeStanza?> createStanza(
-      AgeRecipient recipient, Uint8List symmetricFileKey,
+      AgeRecipient recipient, List<int> symmetricFileKey,
       [SimpleKeyPair? ephemeralKeyPair]) async {
     if (recipient.prefix != publicKeyPrefix) {
       return null;
@@ -41,10 +43,10 @@ class YubikeyPgpX25519AgePlugin extends AgePlugin {
   }
 
   @override
-  Future<AgeStanza?> parseStanza(List<String> arguments, Uint8List body,
+  Future<AgeStanza?> parseStanza(List<String> arguments, List<int> body,
       {PassphraseProvider passphraseProvider =
           const PassphraseProvider()}) async {
-    if (arguments.isEmpty || arguments[0] != tag) {
+    if (arguments.isEmpty || arguments[0] != YubikeyX25519Stanza.tag) {
       return null;
     }
     if (arguments.length != 2) {
@@ -57,7 +59,8 @@ class YubikeyPgpX25519AgePlugin extends AgePlugin {
     if (body.length != 32) {
       throw Exception('Body size is incorrect!');
     }
-    return YubikeyX25519Stanza._internal(ephemeralShare, body, _interface);
+    return YubikeyX25519Stanza(
+        ephemeralShare, WrappedKey.fromRaw(body), _interface);
   }
 
   @override
@@ -67,113 +70,9 @@ class YubikeyPgpX25519AgePlugin extends AgePlugin {
 
   @override
   Future<AgeStanza?> createPassphraseStanza(
-      Uint8List symmetricFileKey, Uint8List salt,
+      List<int> symmetricFileKey, List<int> salt,
       {PassphraseProvider passphraseProvider =
           const PassphraseProvider()}) async {
     return null;
-  }
-}
-
-class YubikeyX25519Stanza extends AgeStanza {
-  static const _info = 'YUBIX25519';
-  static const _algorithmTag = YubikeyPgpX25519AgePlugin.tag;
-  static final _algorithm = X25519();
-  final Uint8List _ephemeralPublicKey;
-  final Uint8List _wrappedKey;
-  final YubikitOpenPGP _interface;
-
-  YubikeyX25519Stanza._internal(
-      this._ephemeralPublicKey, this._wrappedKey, this._interface);
-
-  static Future<YubikeyX25519Stanza> create(YubikitOpenPGP interface,
-      Uint8List recipientPublicKey, Uint8List symmetricFileKey,
-      [SimpleKeyPair? ephemeralKeyPair]) async {
-    ephemeralKeyPair ??= await _algorithm.newKeyPair();
-    final ephemeralPublicKey = await ephemeralKeyPair.extractPublicKey();
-    final derivedKey = await _deriveKey(recipientPublicKey, ephemeralKeyPair);
-    final wrappedKey = await _wrap(symmetricFileKey, derivedKey);
-    return YubikeyX25519Stanza._internal(
-      Uint8List.fromList(ephemeralPublicKey.bytes),
-      wrappedKey,
-      interface,
-    );
-  }
-
-  @override
-  Future<String> serialize() async {
-    final header = '-> $_algorithmTag ${base64RawEncode(_ephemeralPublicKey)}';
-    final body = base64RawEncode(_wrappedKey);
-    return '${wrapAtPosition(header)}\n${wrapAtPosition(body)}';
-  }
-
-  static Future<Uint8List> _wrap(
-      Uint8List symmetricFileKey, SecretKey derivedKey) async {
-    final wrappingAlgorithm = Chacha20.poly1305Aead();
-    final body = await wrappingAlgorithm.encrypt(symmetricFileKey,
-        secretKey: derivedKey, nonce: List.generate(12, (index) => 0x00));
-    return body.concatenation(nonce: false);
-  }
-
-  static Future<SecretKey> _sharedSecret(
-      YubikitOpenPGP interface, Uint8List recipientPublicKey) async {
-    final sharedSecret = await interface.ecSharedSecret(recipientPublicKey);
-    if (sharedSecret.every((element) => element == 0x00)) {
-      throw Exception('All shared secret bytes are 0x00!');
-    }
-    return SecretKey(sharedSecret);
-  }
-
-  static Future<SecretKey> _deriveKey(
-      Uint8List recipientPublicKey, SimpleKeyPair ephemeralKeyPair) async {
-    final sharedSecret =
-        await _stanzaSharedSecret(ephemeralKeyPair, recipientPublicKey);
-    final hkdfAlgorithm = Hkdf(
-      hmac: Hmac(Sha256()),
-      outputLength: 32,
-    );
-    final salt =
-        (await ephemeralKeyPair.extractPublicKey()).bytes + recipientPublicKey;
-    final derivedKey = await hkdfAlgorithm.deriveKey(
-        secretKey: sharedSecret, info: _info.codeUnits, nonce: salt);
-    return derivedKey;
-  }
-
-  static Future<SecretKey> _stanzaSharedSecret(
-      SimpleKeyPair ephemeralKeyPair, Uint8List recipientPublicKey) async {
-    final sharedSecretKey = await _algorithm.sharedSecretKey(
-        keyPair: ephemeralKeyPair,
-        remotePublicKey:
-            SimplePublicKey(recipientPublicKey, type: KeyPairType.x25519));
-    final sharedSecret = await sharedSecretKey.extractBytes();
-    if (sharedSecret.every((element) => element == 0x00)) {
-      throw Exception('All shared secret bytes are 0x00!');
-    }
-    return SecretKey(sharedSecret);
-  }
-
-  @override
-  Future<Uint8List> decryptedFileKey(AgeKeyPair? keyPair) async {
-    if (keyPair == null) {
-      throw Exception('Keypair is mandatory!');
-    }
-    final ephemeralPublicKey =
-        SimplePublicKey(_ephemeralPublicKey, type: KeyPairType.x25519);
-    final sharedSecret = await _sharedSecret(
-        _interface, Uint8List.fromList(ephemeralPublicKey.bytes));
-
-    final hkdfAlgorithm = Hkdf(
-      hmac: Hmac(Sha256()),
-      outputLength: 32,
-    );
-    final salt = ephemeralPublicKey.bytes + keyPair.recipientBytes;
-    final derivedKey = await hkdfAlgorithm.deriveKey(
-        secretKey: sharedSecret, info: _info.codeUnits, nonce: salt);
-    final wrappingAlgorithm = Chacha20.poly1305Aead();
-    final secretBox = SecretBox.fromConcatenation(
-        List.generate(12, (index) => 0x00) + _wrappedKey,
-        macLength: 16,
-        nonceLength: 12);
-    return Uint8List.fromList(
-        await wrappingAlgorithm.decrypt(secretBox, secretKey: derivedKey));
   }
 }

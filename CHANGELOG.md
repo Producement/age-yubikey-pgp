@@ -1,3 +1,7 @@
+## 0.0.6
+
+* Migrate to latest Dage.
+
 ## 0.0.5
 
 * Fix secret key derivation issue.
