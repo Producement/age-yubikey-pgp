@@ -1,3 +1,5 @@
+import 'dart:typed_data';
+
 import 'package:cryptography/cryptography.dart';
 import 'package:dage/dage.dart';
 import 'package:yubikit_openpgp/yubikit_openpgp.dart';
@@ -20,15 +22,17 @@ class YubikeyPgpX25519AgePlugin extends AgePlugin {
   static Future<AgeRecipient> generate(YubikitOpenPGP openPGPInterface) async {
     final publicKey = await openPGPInterface.generateECKey(
         KeySlot.encryption, ECCurve.x25519);
-    return AgeRecipient(publicKeyPrefix, publicKey);
+    return AgeRecipient(
+        publicKeyPrefix, Uint8List.fromList(publicKey.publicKey));
   }
 
   static Future<AgeRecipient?> fromCard(YubikitOpenPGP openPGPInterface) async {
-    final publicKey = await openPGPInterface.getECPublicKey(KeySlot.encryption);
-    if (publicKey == null) {
+    final publicKey = await openPGPInterface.getPublicKey(KeySlot.encryption);
+    if (publicKey == null || publicKey is! ECKeyData) {
       return null;
     }
-    return AgeRecipient(publicKeyPrefix, publicKey);
+    return AgeRecipient(
+        publicKeyPrefix, Uint8List.fromList(publicKey.publicKey));
   }
 
   @override

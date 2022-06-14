@@ -1,3 +1,7 @@
+## 0.0.7
+
+* Use latest yubikit_openpgp.
+
 ## 0.0.6
 
 * Migrate to latest Dage.
