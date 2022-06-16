@@ -1,3 +1,7 @@
+## 0.0.9
+
+* Fix a regression when ephemeral key is missing.
+
 ## 0.0.8
 
 * Add RSA support.

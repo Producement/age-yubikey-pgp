@@ -36,7 +36,7 @@ class YubikeyPgpX25519AgePlugin extends AgePlugin {
       return null;
     }
     return YubikeyX25519Stanza.create(_interface, recipient.bytes,
-        symmetricFileKey, ephemeralKeyPair as SimpleKeyPair);
+        symmetricFileKey, ephemeralKeyPair as SimpleKeyPair?);
   }
 
   @override
