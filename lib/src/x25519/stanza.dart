@@ -4,8 +4,8 @@ import 'package:cryptography/cryptography.dart';
 import 'package:dage/dage.dart';
 import 'package:yubikit_openpgp/yubikit_openpgp.dart';
 
-import 'key_derivator.dart';
-import 'wrapped_key.dart';
+import '../key_derivator.dart';
+import '../wrapped_key.dart';
 
 class YubikeyX25519Stanza extends AgeStanza {
   static const tag = 'YUBIX25519';
@@ -16,8 +16,24 @@ class YubikeyX25519Stanza extends AgeStanza {
   final WrappedKey _wrappedKey;
   final YubikitOpenPGP _interface;
 
-  const YubikeyX25519Stanza(
+  const YubikeyX25519Stanza._internal(
       this._ephemeralPublicKey, this._wrappedKey, this._interface);
+
+  factory YubikeyX25519Stanza.parse(
+      List<String> arguments, List<int> body, YubikitOpenPGP interface) {
+    if (arguments.length != 2) {
+      throw Exception('Wrong amount of arguments: ${arguments.length}!');
+    }
+    final ephemeralShare = base64RawDecode(arguments[1]);
+    if (ephemeralShare.length != 32) {
+      throw Exception('Ephemeral share size is incorrect!');
+    }
+    if (body.length != 32) {
+      throw Exception('Body size is incorrect!');
+    }
+    return YubikeyX25519Stanza._internal(
+        ephemeralShare, WrappedKey.fromRaw(body), interface);
+  }
 
   static Future<YubikeyX25519Stanza> create(YubikitOpenPGP interface,
       List<int> recipientPublicKey, List<int> symmetricFileKey,
@@ -29,7 +45,7 @@ class YubikeyX25519Stanza extends AgeStanza {
     final derivedKey = await _keyDerivator.derive(
         sharedSecret, recipientPublicKey, ephemeralPublicKey.bytes);
     final wrappedKey = WrappedKey(symmetricFileKey, derivedKey);
-    return YubikeyX25519Stanza(
+    return YubikeyX25519Stanza._internal(
       ephemeralPublicKey.bytes,
       wrappedKey,
       interface,

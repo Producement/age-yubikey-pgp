@@ -30,14 +30,23 @@ void main(List<String> arguments) async {
 
   try {
     if (results['generate']) {
-      final recipient = await YubikeyPgpX25519AgePlugin.generate(interface);
-      stdout.writeln(recipient.bytes);
+      final type = results['type'] ?? 'x25519';
+      if (type == 'x25519') {
+        final recipient = await YubikeyPgpX25519AgePlugin.generate(interface);
+        stdout.writeln(recipient.bytes);
+      } else if (type == 'RSA') {
+        final recipient = await YubikeyPgpRsaAgePlugin.generate(interface);
+        stdout.writeln(recipient.bytes);
+      } else {
+        throw Exception('Wrong type!');
+      }
     } else if (results['encrypt']) {
       final recipients = results['recipient'] as List<String>;
       var keyPairs =
           recipients.map((recipient) => AgeRecipient.fromBech32(recipient));
       if (keyPairs.isEmpty) {
-        final recipient = await YubikeyPgpX25519AgePlugin.fromCard(interface);
+        final recipient = await YubikeyPgpX25519AgePlugin.fromCard(interface) ??
+            await YubikeyPgpRsaAgePlugin.fromCard(interface);
         if (recipient != null) {
           keyPairs = [recipient];
         }
@@ -51,7 +60,8 @@ void main(List<String> arguments) async {
         final decrypted = decrypt(readFromInput(results), identities);
         writeToOut(results, decrypted);
       } else {
-        final recipient = await YubikeyPgpX25519AgePlugin.fromCard(interface);
+        final recipient = await YubikeyPgpX25519AgePlugin.fromCard(interface) ??
+            await YubikeyPgpRsaAgePlugin.fromCard(interface);
         if (recipient != null) {
           final decrypted =
               decrypt(readFromInput(results), [recipient.asKeyPair()]);
@@ -61,7 +71,8 @@ void main(List<String> arguments) async {
         }
       }
     } else {
-      final recipient = await YubikeyPgpX25519AgePlugin.fromCard(interface);
+      final recipient = await YubikeyPgpX25519AgePlugin.fromCard(interface) ??
+          await YubikeyPgpRsaAgePlugin.fromCard(interface);
       stdout.writeln(recipient);
     }
   } catch (e, stacktrace) {
@@ -104,6 +115,8 @@ ArgResults parseArguments(List<String> arguments) {
 
   parser.addFlag('generate',
       abbr: 'g', negatable: false, help: 'Generates new key on the Yubikey.');
+  parser.addFlag('type',
+      abbr: 't', negatable: false, help: 'Key type (RSA or x25519)');
   parser.addFlag('encrypt',
       abbr: 'e', negatable: false, help: 'Encrypt the input to the output.');
   parser.addFlag('decrypt',

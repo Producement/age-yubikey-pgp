@@ -1,6 +1,6 @@
 name: age_yubikey_pgp
 description: Age Encryption Yubikey PGP plugin
-version: 0.0.7
+version: 0.0.8
 homepage: https://github.com/Producement/age-yubikey-pgp
 
 environment:
@@ -11,9 +11,10 @@ dependencies:
   convert: ^3.0.2
   cryptography: ^2.0.5
   logging: ^1.0.2
-  dage: ^1.0.5
-  yubikit_openpgp: ^1.0.10
+  dage: ^1.0.6
+  yubikit_openpgp: ^1.0.12
   collection: ^1.16.0
+  pointycastle: ^3.6.0
 
 dev_dependencies:
   build_runner: ^2.1.11

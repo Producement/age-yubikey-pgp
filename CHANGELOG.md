@@ -1,3 +1,7 @@
+## 0.0.8
+
+* Add RSA support.
+
 ## 0.0.7
 
 * Use latest yubikit_openpgp.
