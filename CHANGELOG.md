@@ -1,3 +1,7 @@
+## 0.0.10
+
+* Improve code quality.
+
 ## 0.0.9
 
 * Fix a regression when ephemeral key is missing.

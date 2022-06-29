@@ -19,7 +19,7 @@ void main(List<String> arguments) async {
     }
   });
 
-  final interface = YubikitOpenPGP(SmartCardInterface(), PinProvider());
+  final interface = YubikitOpenPGP(const SmartCardInterface(), PinProvider());
   registerPlugin(interface);
 
   final results = parseArguments(arguments);

@@ -7,7 +7,7 @@ import 'package:yubikit_openpgp/yubikit_openpgp.dart';
 
 void main() async {
   final smartCardInterface =
-      YubikitOpenPGP(SmartCardInterface(), PinProvider());
+      YubikitOpenPGP(const SmartCardInterface(), PinProvider());
   registerPlugin(smartCardInterface);
 
   // Generate key on card
